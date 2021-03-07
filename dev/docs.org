@@ -1,0 +1,3 @@
+#+TITLE: docs
+* how to export org into markdown ?
+M-x org-gfm-export-to-markdown
