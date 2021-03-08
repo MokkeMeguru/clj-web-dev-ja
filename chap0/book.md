@@ -1,25 +1,25 @@
-- [Clojure の特徴と利点](#orgbfd0fad)
-  - [Clojure](#orgbeed2c9)
-  - [ClojureScript](#org0243711)
-  - [関数型言語と REPL 開発](#orgb6526ce)
-- [Clojure Spec ~ データと型の仕様、契約プログラミング ~](#org7550827)
-  - [Spec を元にした生成テスト](#org3ee79d0)
-- [Clojure と テスト、 あと Mock](#orgca93803)
-  - [Mock の話](#org6e5a74a)
+- [Clojure の特徴と利点](#org450a730)
+  - [Clojure](#org318aff4)
+  - [ClojureScript](#org4c84515)
+  - [関数型言語と REPL 開発](#orge8ce012)
+- [Clojure Spec ~ データと型の仕様、契約プログラミング ~](#org8f89488)
+  - [Spec を元にした生成テスト](#org71c1c68)
+- [Clojure と テスト、 あと Mock](#orga87f5e8)
+  - [Mock の話](#org50a1b8c)
 
 本稿は、Clojure x ClojureScript 深める Web 開発 を読むにあたり、なんとなく知っておいてほしい事柄について紹介するものです。
 
-<a id="orgbfd0fad"></a>
+<a id="org450a730"></a>
 
 # Clojure の特徴と利点
 
-<a id="orgbeed2c9"></a>
+<a id="org318aff4"></a>
 
 ## Clojure
 
-Clojure は Lisp と呼ばれるプログラミング言語の影響を強く受けた JVM 言語の一つです。JVM 言語の仲間としては、 Scala や Groovy なんかがあります。日本では Scala の方が有名かもしれません。
+Clojure は Lisp と呼ばれるプログラミング言語の影響を強く受けた JVM 言語の一つです。JVM 言語の仲間としては、 Scala や Groovy があります。日本では Scala の方が有名かもしれません。
 
-もっぱら Web 開発やその周辺に用いられていますが、Java でできることは大体できます (e.g. ゲーム開発、深層学習、スタンドアロンアプリ開発)。
+もっぱら (Web) API 開発に用いられていますが、Java でできることは大体できます (e.g. ゲーム開発、深層学習、スタンドアロンアプリ開発)。
 
 構文の基本は、 `(関数 引数1 引数2 ...)` というもので、例えば 足し算 `1 + 2` であれば、 `(+ 1 2)` となります。 また関数の定義は、
 
@@ -33,11 +33,11 @@ Clojure は Lisp と呼ばれるプログラミング言語の影響を強く受
 
 Clojure について、基礎的な部分を調べるに最も便利なサイトとしては、<https://clojuredocs.org/> を挙げることができます。 また不明点などは雑に Twitter で僕あたりに Reply / DM を投げるか、#Clojure で Tweet すると捕捉されます。
 
-<a id="org0243711"></a>
+<a id="org4c84515"></a>
 
 ## ClojureScript
 
-ClojureScript は Clojure の構文を用いることのできる JavaScript 方言です。 JavaScript 方言としては、TypeScript が有名ですね。
+ClojureScript は Clojure の構文を用いることのできる JavaScript 方言です。 JavaScript 方言としては、TypeScript の方が有名かもしれません。
 
 Clojure / ClojureScript の利点は、サーバ、クライアントで同じ構文を用いて開発ができるという点、また、一部のコードを共通化 (同じコードをサーバ、クライアント両方で使える) という点です。
 
@@ -49,11 +49,11 @@ Clojure / ClojureScript の利点は、サーバ、クライアントで同じ�
 (defn add [x y] (+ x y))
 ```
 
-<a id="orgb6526ce"></a>
+<a id="orge8ce012"></a>
 
 ## 関数型言語と REPL 開発
 
-関数型言語を簡単に説明すると、データを入れてデータを返す &ldquo;関数&rdquo; を基礎としたプログラミング言語です。 Clojure (Lisp) はその中でも緩めの関数型で、オブジェクト指向とうまく組み合わせたちょうどよい感じのプログラムの記述ができます。
+関数型言語を簡単に説明すると、データを入れてデータを返す &ldquo;関数&rdquo; を基礎としたプログラミング言語です。 Clojure (Lisp) は関数型言語の中でもオブジェクト指向を組み合わせることのできる非純粋な関数型言語で、オブジェクト指向の利点を組み合わせたプログラムの記述ができます。
 
 例えば、足し算をする関数 Add を Java で書くと、次のようになります。
 
@@ -102,7 +102,7 @@ Clojure では、コードを書いて評価しその結果を逐次確認する
 
 対して、昨今の テストコードを先に全部記述して、機能開発を行い、コンパイル/テスト実行をする ~~ウォーターフォールのような~~ 開発手法 とは相性があんまり良くないかもしれないです。
 
-<a id="org7550827"></a>
+<a id="org8f89488"></a>
 
 # Clojure Spec ~ データと型の仕様、契約プログラミング ~
 
@@ -217,7 +217,7 @@ Clojure ではこのようにデータ型を宣言することによって、値
 
 参考: <https://clojure.org/guides/spec>
 
-<a id="org3ee79d0"></a>
+<a id="org71c1c68"></a>
 
 ## Spec を元にした生成テスト
 
@@ -242,7 +242,7 @@ Clojure では Spec を用いて データや関数の仕様を記述するこ�
 
 場合によっては使うかもしれないので知っておくと得かもしれません。
 
-<a id="orgca93803"></a>
+<a id="orga87f5e8"></a>
 
 # Clojure と テスト、 あと Mock
 
@@ -302,7 +302,7 @@ Spec を参考にテストを書くとすると、こんな感じになります
 ;; {:test 1, :pass 3, :fail 0, :error 0, :type :summary}
 ```
 
-<a id="org6e5a74a"></a>
+<a id="org50a1b8c"></a>
 
 ## Mock の話
 
