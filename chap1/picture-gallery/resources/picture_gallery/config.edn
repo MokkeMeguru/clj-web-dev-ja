@@ -1,8 +1,0 @@
-{:duct.profile/base
- {:duct.core/project-ns picture-gallery}
-
- :duct.profile/dev   #duct/include "dev"
- :duct.profile/local #duct/include "local"
- :duct.profile/prod  {}
-
- :duct.module/logging {}}

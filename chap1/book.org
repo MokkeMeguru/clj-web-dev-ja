@@ -11,54 +11,47 @@
 #+exclude_tags: noexport
 #+creator: Emacs 27.1 (Org mode 9.4)
 
-本稿は、Clojure における サーバサイドアプリ開発フレームワーク Duct をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
-* Duct
-Duct (https://github.com/duct-framework/duct) は Clojure のサーバサイドアプリ開発のためのフレームワークです。
+本稿は、Clojure における アプリ開発フレームワーク Integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
+* Integrant
+Integrant (https://github.com/weavejester/integrant) は Clojure (ClojureScript) のアプリ開発のためのフレームワークです。
 
-類似する他言語で有名なフレームワークというと、Rails や Django あたりになるのかな、という気持ちもありますが、 Duct はそれに比べると非常に薄いフレームワークです。
+類似する他言語で有名なフレームワークというと、Rails や Django あたりになるのかな、という気持ちもありますが、 Integrant はそれに比べると **非常に薄い** フレームワークです。
 
-Duct の Core が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 1. アプリの立ち上げ 2. HotLoading 3. アプリの停止 が主になります。
+Integrant が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 1. アプリの立ち上げ 2. HotLoading 3. アプリの停止 が主になります。
 
-Duct の詳細については、ClojureサーバサイドフレームワークDuctガイド (https://qiita.com/lagenorhynque/items/8201c116c87b40eb9c22) をご参照いただくとして、本稿では、 Duct のセットアップのみ紹介します。
+Integrant はフレームワークといえどもファイル構造に一切口出ししないため、プロジェクトの立ち上げから初期ディレクトリ構造の決定がややコストになります。 (逆に言えば、ディレクトリ構造を純粋な Clean Architecture ないし別のアーキテクチャにすることができます)
 
 #+BEGIN_SRC shell
 # picture-gallery は本ガイドで作るアプリ名
-lein new duct picture-gallery
+lein new app picture-gallery
 cd picture-gallery
-lein duct setup
 #+END_SRC
 
 以上の shell コードにより、プロジェクト picture-gallery が生成されます。
 
-余談ですが、 Duct は非常に薄いフレームワークのため、 Duct が用いているライブラリ Integrant を用いてゼロからアプリ開発をすることもできます。
-綺麗に アプリ開発を行うには、フレームワークを使わないほうが良いのですが、今回は簡単のために Duct を用いています。 Duct を用いないアプリ開発の例としては、 ミニマリストのためのClojure REST API開発入門 (https://qiita.com/lagenorhynque/items/b15689e5432e0170b172) をご参照下さい。
+余談ですが、Integrant を更に Web サーバ開発向けにしたフレームワーク Duct というものが、 Clojure を書いている人々からは人気があります。
+Duct は非常に薄いフレームワークながら、ルーティングや DB とのやり取りまで面倒を見てくれる非常に便利なフレームワークなので、まず何かを作ってみたいという方は ClojureのDuctでWeb API開発してみた (https://qiita.com/lagenorhynque/items/57d5aa086c4a080a1c54) を参考にすることをおすすめします。
+
+※今回 Duct を用いていない理由は、Duct の詳細な実装を理解・説明するのが困難であること、 Integrant を活用する場面が多いことを挙げることができます。
 * Clean Architecture と Directory Structure
-先の章で picture-gallery という API サーバの骨子を Duct フレームワークに則って初期化しました。
+先の章で picture-gallery という API サーバの骨子を初期化しました。
 現在のディレクトリ構造は次のようになっています。
 
 #+begin_example
-$ tree .
-.
-|-- README.md
-|-- dev
-|   |-- resources
-|   |   |-- dev.edn
-|   |   `-- local.edn
-|   `-- src
-|       |-- dev.clj
-|       |-- local.clj
-|       `-- user.clj
-|-- profiles.clj
-|-- project.clj
-|-- resources
-|   `-- picture_gallery
-|       `-- config.edn
-|-- src
-|   |-- duct_hierarchy.edn
-|   `-- picture_gallery
-|       `-- main.clj
-`-- test
-    `-- picture_gallery
+picture_gallery
+├── CHANGELOG.md
+├── LICENSE
+├── README.md
+├── doc
+│   └── intro.md
+├── project.clj
+├── resources
+├── src
+│   └── picture_gallery
+│       └── core.clj
+└── test
+    └── picture_gallery
+        └── core_test.clj
 #+end_example
 
 ここから例えば API のハンドラを生やしたり、 DB への接続コードを書いたり、Swagger との連携を考えたりすると、どうファイルを作っていけばよいのか指針がよくわからないことになります。
@@ -118,9 +111,15 @@ Clean Architecture は要素ごとに分割、という点が重要なので、�
 なお、他様々なパターンがあるので、自分の書きやすい形に応用して下さい。
 
 #+begin_example
+picture_gallery/dev
+|-- resources                   (開発用の素材)
+`-- src                         (開発だけに使うコード)
+    `-- user.clj
+
+
 picture_gallery/src
-|-- duct_hierarchy.edn
 `-- picture_gallery
+    |-- core.clj                (エントリポイント)
     |-- cmd                     (パッチなどの CLI コマンド用)
     |-- domain                  (Entities)
     |-- infrastructure
@@ -139,12 +138,34 @@ picture_gallery/src
     |   |   `-- firebase        (firebase との通信)
     |   `-- presenter
     |       `-- api             (出力 json へのシリアライズ)
-    |-- main.clj
     |-- usecase
     `-- utils
-        `-- util.clj            (*)
+        `-- error.clj           (後述するエラーハンドリングのためのコード)
 #+end_example
 
+dev フォルダを利用するために、 ~project.clj~ を次のように修正します。
+#+BEGIN_SRC clojure
+(defproject picture-gallery "0.1.0-SNAPSHOT"
+  :description "FIXME: write description"
+  :url "http://example.com/FIXME"
+  ;; :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
+  ;;           :url "https://www.eclipse.org/legal/epl-2.0/"}
+  :dependencies [[org.clojure/clojure "1.10.1"]]
+  :resource-paths ["resources" "target/resources"]
+
+  :main ^:skip-aot picture-gallery.core
+  :target-path "target/%s"
+  :profiles
+  {:dev [:project/dev]
+   :repl {:prep-tasks ^:replace ["javac" "compile"]
+          :repl-options {:init-ns user}}
+   :project/dev {:source-paths ["dev/src"]
+                 :resource-paths ["dev/resources"]}
+   :uberjar {:aot :all
+             :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
+#+END_SRC
+
+(このあたりのコードはかなり Duct の構造を意識しています)
 * 余談: threading Macro と エラーハンドリング
 ** Threading Macro
 Clojure には便利なマクロとして threading macro があります。一般的な Lisp 構文では、データ x に対して関数 A -> 関数 B -> 関数 C と適用する際に ~(C (B (A x)))~ と記述します。これは処理の流れとして

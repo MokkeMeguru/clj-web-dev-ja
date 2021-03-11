@@ -3,3 +3,4 @@ target/
 .nrepl-port
 .lein-repl-histor
 /chap1/.lein-repl-history
+/chap1/picture-gallery-duct/
