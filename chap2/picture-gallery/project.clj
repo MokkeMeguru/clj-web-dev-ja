@@ -1,22 +1,31 @@
 (defproject picture-gallery "0.1.0-SNAPSHOT"
+
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
-  :min-lein-version "2.0.0"
-  :dependencies [[org.clojure/clojure "1.10.0"]
-                 [duct/core "0.7.0"]
-                 [duct/module.logging "0.4.0"]]
-  :plugins [[duct/lein-duct "0.12.1"]]
-  :main ^:skip-aot picture-gallery.main
+  ;; :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
+  ;;           :url "https://www.eclipse.org/legal/epl-2.0/"}
+  :dependencies [[org.clojure/clojure "1.10.3"]
+                 [org.clojure/tools.namespace "1.1.0"]]
   :resource-paths ["resources" "target/resources"]
-  :prep-tasks     ["javac" "compile" ["run" ":duct/compiler"]]
-  :middleware     [lein-duct.plugin/middleware]
+
+  :main ^:skip-aot picture-gallery.core
+  :target-path "target/%s"
   :profiles
-  {:dev  [:project/dev :profiles/dev]
-   :repl {:prep-tasks   ^:replace ["javac" "compile"]
+  {:dev [:project/dev]
+   :repl {:prep-tasks ^:replace ["javac" "compile"]
           :repl-options {:init-ns user}}
-   :uberjar {:aot :all}
-   :profiles/dev {}
-   :project/dev  {:source-paths   ["dev/src"]
-                  :resource-paths ["dev/resources"]
-                  :dependencies   [[integrant/repl "0.3.1"]
-                                   [eftest "0.5.7"]]}})
+   :project/dev {:source-paths ["dev/src"]
+                 :resource-paths ["dev/resources"]}
+   :uberjar {:aot :all
+             :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
+
+
+  ;; :description "FIXME: write description"
+  ;; :url "http://example.com/FIXME"
+  ;; :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
+  ;;           :url "https://www.eclipse.org/legal/epl-2.0/"}
+  ;; :dependencies [[org.clojure/clojure "1.10.1"]]
+  ;; :main ^:skip-aot picture-gallery.core
+  ;; :target-path "target/%s"
+  ;; :profiles {:uberjar {:aot :all
+  ;;                      :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}}

@@ -2,69 +2,43 @@
 
 FIXME: description
 
-## Developing
+## Installation
 
-### Setup
+Download from http://example.com/FIXME.
 
-When you first clone this repository, run:
+## Usage
 
-```sh
-lein duct setup
-```
+FIXME: explanation
 
-This will create files for local configuration, and prep your system
-for the project.
+    $ java -jar picture-gallery-0.1.0-standalone.jar [args]
 
-### Environment
+## Options
 
-To begin developing, start with a REPL.
+FIXME: listing of options this app accepts.
 
-```sh
-lein repl
-```
+## Examples
 
-Then load the development environment.
-
-```clojure
-user=> (dev)
-:loaded
-```
-
-Run `go` to prep and initiate the system.
-
-```clojure
-dev=> (go)
-:duct.server.http.jetty/starting-server {:port 3000}
-:initiated
-```
-
-By default this creates a web server at <http://localhost:3000>.
-
-When you make changes to your source files, use `reset` to reload any
-modified files and reset the server.
-
-```clojure
-dev=> (reset)
-:reloading (...)
-:resumed
-```
-
-### Testing
-
-Testing is fastest through the REPL, as you avoid environment startup
-time.
-
-```clojure
-dev=> (test)
 ...
-```
 
-But you can also run tests through Leiningen.
+### Bugs
 
-```sh
-lein test
-```
+...
 
-## Legal
+### Any Other Sections
+### That You Think
+### Might be Useful
+
+## License
 
 Copyright © 2021 FIXME
+
+This program and the accompanying materials are made available under the
+terms of the Eclipse Public License 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0.
+
+This Source Code may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License, v. 2.0 are satisfied: GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or (at your
+option) any later version, with the GNU Classpath Exception which is available
+at https://www.gnu.org/software/classpath/license.html.

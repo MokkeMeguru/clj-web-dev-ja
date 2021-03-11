@@ -1,8 +1,9 @@
 (ns user)
 
-(defn dev
-  "Load and switch to the 'dev' namespace."
-  []
+(println "Hello")
+
+(defn dev []
+  (println "switch dev?")
   (require 'dev)
   (in-ns 'dev)
   :loaded)
