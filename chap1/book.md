@@ -1,71 +1,64 @@
-- [Duct](#org63f7e34)
-- [Clean Architecture と Directory Structure](#org1105c0f)
-  - [Clean Architecture](#org00d41ca)
-    - [依存関係を意識したサービス開発の例](#org2612e9c)
-  - [Clean Architecture のために Directory Structure を考える](#orgca376e6)
-- [余談: threading Macro と エラーハンドリング](#org4654ec7)
-  - [Threading Macro](#org3e4c989)
-  - [エラーハンドリング](#org5508475)
+- [Integrant](#orgcf22758)
+- [Clean Architecture と Directory Structure](#orga804d0e)
+  - [Clean Architecture](#orge3b322b)
+    - [依存関係を意識したサービス開発の例](#orgbb21dfe)
+  - [Clean Architecture のために Directory Structure を考える](#org0ed971e)
+- [余談: threading Macro と エラーハンドリング](#org1ee3d0b)
+  - [Threading Macro](#orgce2d650)
+  - [エラーハンドリング](#orgb24566e)
 
-本稿は、Clojure における サーバサイドアプリ開発フレームワーク Duct をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
+本稿は、Clojure における アプリ開発フレームワーク Integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
 
-<a id="org63f7e34"></a>
+<a id="orgcf22758"></a>
 
-# Duct
+# Integrant
 
-Duct (<https://github.com/duct-framework/duct>) は Clojure のサーバサイドアプリ開発のためのフレームワークです。
+Integrant (<https://github.com/weavejester/integrant>) は Clojure (ClojureScript) のアプリ開発のためのフレームワークです。
 
-類似する他言語で有名なフレームワークというと、Rails や Django あたりになるのかな、という気持ちもありますが、 Duct はそれに比べると非常に薄いフレームワークです。
+類似する他言語で有名なフレームワークというと、Rails や Django あたりになるのかな、という気持ちもありますが、 Integrant はそれに比べると \***\*非常に薄い\*\*** フレームワークです。
 
-Duct の Core が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 1. アプリの立ち上げ 2. HotLoading 3. アプリの停止 が主になります。
+Integrant が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 1. アプリの立ち上げ 2. HotLoading 3. アプリの停止 が主になります。
 
-Duct の詳細については、Clojure サーバサイドフレームワーク Duct ガイド (<https://qiita.com/lagenorhynque/items/8201c116c87b40eb9c22>) をご参照いただくとして、本稿では、 Duct のセットアップのみ紹介します。
+Integrant はフレームワークといえどもファイル構造に一切口出ししないため、プロジェクトの立ち上げから初期ディレクトリ構造の決定がややコストになります。 (逆に言えば、ディレクトリ構造を純粋な Clean Architecture ないし別のアーキテクチャにすることができます)
 
 ```shell
 # picture-gallery は本ガイドで作るアプリ名
-lein new duct picture-gallery
+lein new app picture-gallery
 cd picture-gallery
-lein duct setup
 ```
 
 以上の shell コードにより、プロジェクト picture-gallery が生成されます。
 
-余談ですが、 Duct は非常に薄いフレームワークのため、 Duct が用いているライブラリ Integrant を用いてゼロからアプリ開発をすることもできます。 綺麗に アプリ開発を行うには、フレームワークを使わないほうが良いのですが、今回は簡単のために Duct を用いています。 Duct を用いないアプリ開発の例としては、 ミニマリストのための Clojure REST API 開発入門 (<https://qiita.com/lagenorhynque/items/b15689e5432e0170b172>) をご参照下さい。
+余談ですが、Integrant を更に Web サーバ開発向けにしたフレームワーク Duct というものが、 Clojure を書いている人々からは人気があります。 Duct は非常に薄いフレームワークながら、ルーティングや DB とのやり取りまで面倒を見てくれる非常に便利なフレームワークなので、まず何かを作ってみたいという方は Clojure の Duct で Web API 開発してみた (<https://qiita.com/lagenorhynque/items/57d5aa086c4a080a1c54>) を参考にすることをおすすめします。
 
-<a id="org1105c0f"></a>
+※今回 Duct を用いていない理由は、Duct の詳細な実装を理解・説明するのが困難であること、 Integrant を活用する場面が多いことを挙げることができます。
+
+<a id="orga804d0e"></a>
 
 # Clean Architecture と Directory Structure
 
-先の章で picture-gallery という API サーバの骨子を Duct フレームワークに則って初期化しました。 現在のディレクトリ構造は次のようになっています。
+先の章で picture-gallery という API サーバの骨子を初期化しました。 現在のディレクトリ構造は次のようになっています。
 
-    $ tree .
-    .
-    |-- README.md
-    |-- dev
-    |   |-- resources
-    |   |   |-- dev.edn
-    |   |   `-- local.edn
-    |   `-- src
-    |       |-- dev.clj
-    |       |-- local.clj
-    |       `-- user.clj
-    |-- profiles.clj
-    |-- project.clj
-    |-- resources
-    |   `-- picture_gallery
-    |       `-- config.edn
-    |-- src
-    |   |-- duct_hierarchy.edn
-    |   `-- picture_gallery
-    |       `-- main.clj
-    `-- test
-        `-- picture_gallery
+    picture_gallery
+    ├── CHANGELOG.md
+    ├── LICENSE
+    ├── README.md
+    ├── doc
+    │   └── intro.md
+    ├── project.clj
+    ├── resources
+    ├── src
+    │   └── picture_gallery
+    │       └── core.clj
+    └── test
+        └── picture_gallery
+            └── core_test.clj
 
 ここから例えば API のハンドラを生やしたり、 DB への接続コードを書いたり、Swagger との連携を考えたりすると、どうファイルを作っていけばよいのか指針がよくわからないことになります。
 
 今回はここに Clean Architecture という概念を導入して開発を進めていきます。
 
-<a id="org00d41ca"></a>
+<a id="orge3b322b"></a>
 
 ## Clean Architecture
 
@@ -89,7 +82,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
 
 参考: Clean Architecture で API Server を構築してみる(<https://qiita.com/hirotakan/items/698c1f5773a3cca6193e>)
 
-<a id="org2612e9c"></a>
+<a id="orgbb21dfe"></a>
 
 ### 依存関係を意識したサービス開発の例
 
@@ -102,6 +95,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
   画像投稿を行う際のデータの仕様です。
 
       ID:           uuid
+      ユーザID:      投稿したユーザの ID
       Title:        タイトル (1 ~ 255 文字)
       Description： 詳細情報 (0 ~ 1023 文字)
       Image:        画像
@@ -119,7 +113,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
 
   ルーティングや、DB への接続を行います。
 
-<a id="orgca376e6"></a>
+<a id="org0ed971e"></a>
 
 ## Clean Architecture のために Directory Structure を考える
 
@@ -127,9 +121,15 @@ Clean Architecture は要素ごとに分割、という点が重要なので、�
 
 なお、他様々なパターンがあるので、自分の書きやすい形に応用して下さい。
 
+    picture_gallery/dev
+    |-- resources                   (開発用の素材)
+    `-- src                         (開発だけに使うコード)
+        `-- user.clj
+
+
     picture_gallery/src
-    |-- duct_hierarchy.edn
     `-- picture_gallery
+        |-- core.clj                (エントリポイント)
         |-- cmd                     (パッチなどの CLI コマンド用)
         |-- domain                  (Entities)
         |-- infrastructure
@@ -148,16 +148,40 @@ Clean Architecture は要素ごとに分割、という点が重要なので、�
         |   |   `-- firebase        (firebase との通信)
         |   `-- presenter
         |       `-- api             (出力 json へのシリアライズ)
-        |-- main.clj
         |-- usecase
         `-- utils
-            `-- util.clj            (*)
+            `-- error.clj           (後述するエラーハンドリングのためのコード)
 
-<a id="org4654ec7"></a>
+dev フォルダを利用するために、 `project.clj` を次のように修正します。
+
+```clojure
+(defproject picture-gallery "0.1.0-SNAPSHOT"
+  :description "FIXME: write description"
+  :url "http://example.com/FIXME"
+  ;; :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
+  ;;           :url "https://www.eclipse.org/legal/epl-2.0/"}
+  :dependencies [[org.clojure/clojure "1.10.1"]]
+  :resource-paths ["resources" "target/resources"]
+
+  :main ^:skip-aot picture-gallery.core
+  :target-path "target/%s"
+  :profiles
+  {:dev [:project/dev]
+   :repl {:prep-tasks ^:replace ["javac" "compile"]
+          :repl-options {:init-ns user}}
+   :project/dev {:source-paths ["dev/src"]
+                 :resource-paths ["dev/resources"]}
+   :uberjar {:aot :all
+             :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
+```
+
+(このあたりのコードはかなり Duct の構造を意識しています)
+
+<a id="org1ee3d0b"></a>
 
 # 余談: threading Macro と エラーハンドリング
 
-<a id="org3e4c989"></a>
+<a id="orgce2d650"></a>
 
 ## Threading Macro
 
@@ -212,7 +236,7 @@ Clojure では threading macro がこの要望を答えるものとしてあり�
 
 という形に書くことができます。
 
-<a id="org5508475"></a>
+<a id="orgb24566e"></a>
 
 ## エラーハンドリング
 
