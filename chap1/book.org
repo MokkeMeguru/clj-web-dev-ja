@@ -11,13 +11,18 @@
 #+exclude_tags: noexport
 #+creator: Emacs 27.1 (Org mode 9.4)
 
-本稿は、Clojure における アプリ開発フレームワーク Integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
+本稿は、Clojure における アプリ開発フレームワーク integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
 * Integrant
+#+begin_quote
+integrant (https://github.com/weavejester/integrant) は Data-Driven Architecture で アプリケーションを構築するための Clojure および ClojureScript のマイクロフレームワークです。
+#+end_quote
+
 Integrant (https://github.com/weavejester/integrant) は Clojure (ClojureScript) のアプリ開発のためのフレームワークです。
 
 類似する他言語で有名なフレームワークというと、Rails や Django あたりになるのかな、という気持ちもありますが、 Integrant はそれに比べると **非常に薄い** フレームワークです。
 
-Integrant が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 1. アプリの立ち上げ 2. HotLoading 3. アプリの停止 が主になります。
+Integrant が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 0. システム構成の読み込み 1. アプリの立ち上げ 2. 動的なアプリの更新 3. アプリの停止 が主になります。
+HTTP ハンドラやルーティング、ORM などの親切かつ *魔法のような* 機能は提供していません。
 
 Integrant はフレームワークといえどもファイル構造に一切口出ししないため、プロジェクトの立ち上げから初期ディレクトリ構造の決定がややコストになります。 (逆に言えば、ディレクトリ構造を純粋な Clean Architecture ないし別のアーキテクチャにすることができます)
 
