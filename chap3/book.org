@@ -1,0 +1,104 @@
+#+TITLE: Book
+* Test API の作成
+今回は Test API として ping - pong API を作ってみることにします。
+
+ping - pong API とは /ping へリクエストを投げると "pong" という文字が返ってくる API です。
+DBへの接続もないので、非常にシンプルに作ることができます。
+
+更に今後の開発のために、 Swagger と呼ばれる API の仕様記述のためのツールを使ってブラウザ上で ping - pong API をテストできるようにします。
+
+** Swagger のある生活
+サーバとクライアントの接続部分の情報共有をどのように行うのか。サーバ・クライアントアプリケーション (サービス) を開発する際にこの議題がしばしば挙がります。 (※ Rails / Django のようなサーバとクライアントを一つのプログラムで完結させるものを除く)
+
+一般にサーバとクライアントは JSON を始めとする何らかのフォーマットにエンコードされたデータをやり取りし、それらを仕様として各プログラムは認識 / デコードします。
+
+近年では、Swagger (OpenAPI) というツールがこの仕様共有のために注目されています。
+Swagger は API のエンドポイントとそのエンドポイントで通信する際のデータ仕様をブラウザを用いて確認できるツールで、また、Swagger を Web クライアントとしてサーバとデータのやり取りをテストすることができます。
+
+本ガイドでは、Swagger をサーバ側のコードから自動生成することで、Swagger の利用を行っていきます。
+
+** ping - pong フローの確認
+今回扱う ping - pong API のフローを確認します。今回は練習のため comment という optional な 値を導入しました。
+
+#+begin_example
+client                               server
+  |       +--------------------+       |
+  |  ---  | /ping              |  -->  |
+  |       |  'ping-message     |       |
+  |       +--------------------+       |
+  |                                    |
+  |       +----------<success>-+       |
+  |  <--  |  'pong-message     |  ---  |
+  |       +--------------------+       |
+  ~                                    ~
+  |       +----------<failure>-+       |
+  |  <--  |  'error-message    |  ---  |
+  |       +--------------------+       |
+
+#+end_example
+
+- 'ping-message (query)
+  #+begin_src clojure
+  {:ping "ping"
+   :comment "<optional string>"}
+  #+end_src
+- 'pong-message (response body)
+  #+BEGIN_SRC clojure
+{:pong "pong"
+ :comment "<optional string>"}
+  #+END_SRC
+
+** domain の作成
+domain (entities) は取り扱うデータの仕様です。文字長のような制約も含めた仕様を記述していきます。
+
+#+caption: src/picture_gallery/domain/sample.clj
+#+BEGIN_SRC clojure
+(ns picture-gallery.domain.sample
+  (:require [clojure.spec.alpha :as s]))
+
+(def max-comment-length 1024)
+
+(s/def ::ping (s/and string? (partial = "ping")))
+(s/def ::pong (s/and string? (partial = "pong")))
+
+(s/def ::not-exist-comment nil?)
+(s/def ::exist-comment (s/and string? #(< (count %) max-comment-length)))
+(s/def ::comment (s/or :not-exist-comment ::not-exist-comment
+                       :exist-comment ::exist-comment))
+#+END_SRC
+
+REPL で動作確認をしてみましょう。
+#+BEGIN_SRC clojure
+(s/valid? ::ping "ping") ;; => true
+(s/valid? ::ping 0)      ;; => false
+(s/valid? ::ping "pong") ;; => false
+#+END_SRC
+
+動作確認を元に、テストを書いておきます。
+
+#+caption: test/picture_gallery/domain/sample_test.clj
+#+BEGIN_SRC clojure
+(ns picture-gallery.domain.sample-test
+  (:require [picture-gallery.domain.sample :as sut]
+            [picture-gallery.utils.string :as pg-string]
+            [clojure.spec.alpha :as s]
+            [clojure.test :as t]))
+
+(t/deftest ping
+  (t/is (not (s/valid? ::sut/ping "pong")))
+  (t/is (not (s/valid? ::sut/ping 0)))
+  (t/is (s/valid? ::sut/ping "ping")))
+
+(t/deftest pong
+  (t/is (not (s/valid? ::sut/pong "ping")))
+  (t/is (not (s/valid? ::sut/pong 0)))
+  (t/is (s/valid? ::sut/pong "pong")))
+
+(t/deftest _comment
+  (t/is (s/valid? ::sut/comment nil))
+  (t/is (s/valid? ::sut/comment "hello"))
+  (t/is (not (s/valid? ::sut/comment (pg-string/rand-str 2048)))))
+#+END_SRC
+
+なお、動作確認、テストの段階で仕様に漏れがあれば、修正を施しましょう。
+** ルーティングを設定し、 Swagger を生やす
