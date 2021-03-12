@@ -4,3 +4,5 @@ target/
 .lein-repl-histor
 /chap1/.lein-repl-history
 /chap1/picture-gallery-duct/
+/chap2/picture-gallery-bak/
+/chap2/picture-gallery-duct/
