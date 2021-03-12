@@ -1,20 +1,21 @@
-- [開発環境の Dockerize](#orgf8d3efa)
-  - [Port の開放](#org74b74f4)
-  - [Directory のマウント](#org400cc59)
-  - [動作確認](#org41651c8)
-- [ライブラリの追加](#org60b389f)
-- [エディタとの接続](#org887ac26)
-- [Test API の作成](#orgad0ecad)
-  - [Swagger のある生活](#orgb30f5c8)
-  - [ping - pong フローの確認](#orgbee7da0)
-  - [domain の作成](#org19a6b14)
-- [付録](#org32bf168)
-  - [Docker コンテナ内で tmux を走らせる フロー](#orgb2db540)
-  - [Emacs で Clojure 開発を行う Tips](#orgaf814a6)
+- [開発環境の Dockerize](#org9be56ad)
+  - [Port の開放](#org716bc14)
+  - [Directory のマウント](#org7fcfc9a)
+  - [動作確認](#orgfa4ee04)
+- [ライブラリの追加](#orgb5a3aaf)
+- [エディタとの接続](#orgda80fdc)
+- [integrant のセットアップ](#org07f58ed)
+  - [integrant と REPL](#org3c226cb)
+  - [環境変数を読み込む](#orga872135)
+  - [環境変数を読み込む CLI の作成](#orgd3677ca)
+- [付録](#org3c03489)
+  - [ここまでのディレクトリの確認](#org2621ec2)
+  - [Docker コンテナ内で tmux を走らせる フロー](#orgb0468bc)
+  - [Emacs で Clojure 開発を行う Tips](#org5d5f392)
 
-本稿では、Web API サーバを書いていくにあたり必要な、1. 開発環境の Dockerize、2. 基礎的なライブラリの列挙、3. Test API の作成 を行います。
+本稿では、Web API サーバを書いていくにあたり必要な、1. 開発環境の Dockerize、2. 基礎的なライブラリの列挙、3. integrant のセットアップを行います。
 
-<a id="orgf8d3efa"></a>
+<a id="org9be56ad"></a>
 
 # 開発環境の Dockerize
 
@@ -30,16 +31,13 @@
     │   └── postgres
     │       └── Dockerfile
     ├── dev
+    ├── doc
     ├── docker-compose.yml  (docker-compose の設定)
-    ├── profiles.clj
     ├── project.clj
     ├── resources
-    │   └── picture_gallery
-    │       └── config.edn
     ├── src
     ├── target
     └── test
-        └── picture_gallery
 
 Clojure の API Server 用の Dockerfile (api-server/Dockerfile) は次の通り
 
@@ -48,6 +46,8 @@ FROM clojure:openjdk-11-lein
 MAINTAINER MokkeMeguru <meguru.mokke@gmail.com>
 ENV LANG C.UTF-8
 ENV APP_HOME /app
+RUN apt-get update
+RUN apt-get -y install tmux
 RUN mkdir $APP_HOME
 WORKDIR $APP_HOME
 ```
@@ -92,27 +92,27 @@ volumes:
   lib_data:
 ```
 
-dev<sub>db</sub><sub>volume</sub>、lib<sub>data</sub> は docker-compose のデータ永続化の機能 (named volume) を用いるために記述されています。
+dev_db_volume、lib_data は docker-compose のデータ永続化の機能 (named volume) を用いるために記述されています。
 
-<a id="org74b74f4"></a>
+<a id="org716bc14"></a>
 
 ## Port の開放
 
 docker-compose で走る Docker コンテナの内部と交信するために、 port の開放をすることができます。
 
-- `localhost:5566` で内部の DB へ接続するため、dev<sub>db</sub>/ports に `5566:5432` を追加しています。
+- `localhost:5566` で内部の DB へ接続するため、dev_db/ports に `5566:5432` を追加しています。
 
 - `localhost:3000` を通して API サーバとやり取りするために、 repl/ports に `3000:3000` を追加しています。
 
 - `localhost:39998` を通して repl コンテナ内の Clojure インタプリタへ接続するために、 repl/ports に `39998:39998` を追加しています。
 
-<a id="org400cc59"></a>
+<a id="org7fcfc9a"></a>
 
 ## Directory のマウント
 
 今回作るサーバ picture-gallery のソースコードをそのまま repl コンテナで読み込むために、repl/volumes に `.:/app` としてコンテナ内部の `/app` に picture-gallery フォルダをそのままマウントさせています。
 
-<a id="org41651c8"></a>
+<a id="orgfa4ee04"></a>
 
 ## 動作確認
 
@@ -138,9 +138,9 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 とします。
 
-管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.1](#orgb2db540)
+管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#orgb0468bc)
 
-<a id="org60b389f"></a>
+<a id="orgb5a3aaf"></a>
 
 # ライブラリの追加
 
@@ -149,6 +149,10 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 <details><summary>追加するライブラリ一覧</summary><div> 簡単のため、追加するライブラリの詳細については省き、一覧と捕捉のみ紹介します。 これらのライブラリの追加は、Clojure x ClojureScript で深める Web 開発 (1) で紹介される `project.clj` に追加されています。
 
 ```clojure
+;; integrant
+[integrant "0.8.0"]
+[integrant/repl "0.3.2"]
+
 ;; firebase auth のためのライブラリ
 [com.google.firebase/firebase-admin "7.1.0" :exclusions [com.google.http-client/google-http-client]]
 
@@ -194,19 +198,19 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 [camel-snake-kebab "0.4.2"]
 ```
 
-</div><details>
+</div></details>
 
 なお、注意する点として、ライブラリを追加したら、 **REPL は再起動が必要です** 。 `exit` から `lein repl` で再接続して下さい。
 
-<a id="org887ac26"></a>
+<a id="orgda80fdc"></a>
 
 # エディタとの接続
 
 ここまでで、Docker コンテナ内で REPL が立ち上がりました。
 
-しかし REPL は各エディタと連携することでより開発を快適にすることができます。 具体的には、コードを書いたところから環境に反映して動かすことができるようになります。
+REPL は各エディタと連携することでより開発を快適にすることができます。 具体的には、コードを書いたところから環境に反映して動かすことができるようになります。
 
-Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、InteliJ などありますが、今回は **多くの人が使っているという理由だけで** VSCode での使い方を紹介します。 (~~多くのファイルを眺める必要のある規模の開発で VSCode を使うんですか？~~)
+Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、InteliJ などありますが、今回は多くの人が使っているという理由で VSCode での使い方を紹介します。
 
 まず `project.clj` に以下の設定を追加します。
 
@@ -218,7 +222,7 @@ Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、Inteli
 
 これで REPL が開いているポートが、 39998 に固定されます。 先程 docker-compose で port 39998 を開放しているので、 Docker コンテナの外部から REPL のポートへ接続できるようになります。
 
-1.  lein repl を Docker コンテナ内で実行します。
+1.  `lein repl` を Docker コンテナ内で実行します。
 
 2.  VSCode に拡張機能 Calva をインストールします。
 
@@ -235,71 +239,371 @@ Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、Inteli
 
 なお、Calva そのものの詳細な使い方は、 <https://calva.io/> を参考にして下さい。
 
-<a id="orgad0ecad"></a>
+<a id="org07f58ed"></a>
 
-# Test API の作成
+# integrant のセットアップ
 
-今回は Test API として ping - pong API を作ってみることにします。
+> integrant (<https://github.com/weavejester/integrant>) は Data-Driven Architecture で アプリケーションを構築するための Clojure および ClojureScript のマイクロフレームワークです。
 
-ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo; という文字が返ってくる API です。 DB への接続もないので、非常にシンプルに作ることができます。
+integrant で重要となるファイルに、 システムの内部構成を記述したものである、config があります。
 
-更に今後の開発のために、 Swagger と呼ばれる API の仕様記述のためのツールを使ってブラウザ上で ping - pong API をテストできるようにします。
+例えば、次のようなサーバの例を考えます。 登場人物は、環境変数、データベースのコネクションプール、そしてサーバです。 それぞれには依存関係があり、例えば、
 
-<a id="orgb30f5c8"></a>
+- データベースのコネクションプールには環境変数から得られるアドレスが必要となり、
+- サーバには環境変数と DB のコネクションプールの両方が必要になります。
 
-## Swagger のある生活
+これを、integrant の config 、 `config.edn` を用いて記述すると次のようになります。
 
-サーバとクライアントの接続部分の情報共有をどのように行うのか。サーバ・クライアントアプリケーション (サービス) を開発する際にこの議題がしばしば挙がります。 (※ Rails / Django のようなサーバとクライアントを一つのプログラムで完結させるものを除く)
+```clojure
+;; config.edn
+{:env {}
+ :db-connector {:ref-env #ig/ref :env}
+ :server {:ref-port 3000
+          :ref-env #ig/ref :env
+          :ref-db-connector #ig/ref :db-connector}}
+```
 
-一般にサーバとクライアントは JSON を始めとする何らかのフォーマットにエンコードされたデータをやり取りし、それらを仕様として各プログラムは認識 / デコードします。
+環境変数 `:env` に対しては、特に必要要素がないので空辞書 `{}` が与えられています。 コネクションプール `:db-connector` に対しては、環境変数が必要となるので `:ref-env` として先に宣言した `:env` を `{:ref-env #ig/ref :env}` として追加します。
 
-近年では、Swagger (OpenAPI) というツールがこの仕様共有のために注目されています。 Swagger は API のエンドポイントとそのエンドポイントで通信する際のデータ仕様をブラウザを用いて確認できるツールで、また、Swagger を Web クライアントとしてサーバとデータのやり取りをテストすることができます。
+この静的なシステム構成ファイルはプログラムコードとは独立であり、 **設計と実装を分離** することができます。
 
-本ガイドでは、Swagger をサーバ側のコードから自動生成することで、Swagger の利用を行っていきます。
+さらに、例えばサーバの起動が不要な CLI コマンドを書く際に、 `:server` を省いた config を別に作ることで、 `:db-connector` をはじめとする他の実装をそのまま再利用することもできます。 この仕組みは Clean Architecture の他要素を変えずに UI や DB を置き換えられる、という考え方と合致しています。
 
-<a id="orgbee7da0"></a>
+開発時には、コード編集後に config を再読込みすることで、全体のシステムをアップデートすることができます。
 
-## ping - pong フローの確認
+以降では、integrant に慣れる、ということで 環境変数を読み込むというコンポーネントを作っていきます。
 
-今回扱う ping - pong API のフローを確認します。今回は練習のため comment という optional な 値を導入しました。
+<a id="org3c226cb"></a>
 
-    client                               server
-      |       +--------------------+       |
-      |  ---  | /ping              |  -->  |
-      |       |  'ping-message     |       |
-      |       +--------------------+       |
-      |                                    |
-      |       +----------<success>-+       |
-      |  <--  |  'pong-message     |  ---  |
-      |       +--------------------+       |
-      ~                                    ~
-      |       +----------<failure>-+       |
-      |  <--  |  'error-message    |  ---  |
-      |       +--------------------+       |
+## integrant と REPL
 
-- &rsquo;ping-message (query)
+integrant を使うためには、 config を書き、読み込む機構を書く必要があります。 さらに、 REPL 開発と組み合わせるための機構も書いておくと便利です。 幸い、この部分は非常にシンプルに書くことができるので、ここですべて紹介します。
 
-  ```clojure
-    {:ping "ping"
-     :comment "<optional string>"}
-  ```
+最初に integrant の config を作ります。 まだ何も作っていないので何も要素がありません。
 
-- &rsquo;pong-message (response body)
+```clojure
+{}
+```
 
-  ```clojure
-  {:pong "pong"
-   :comment "<optional string>"}
-  ```
+次に config を読み込むためのコードを作ります。
 
-<a id="org19a6b14"></a>
+まずはコマンドで実行する用。 コマンド `lein run` によって 関数 `-main` が実行され、サーバが立ち上がります。
 
-## domain の作成
+```clojure
+(ns picture-gallery.core
+  (:gen-class)
+  (:require [environ.core :refer [env]]
+            [taoensso.timbre :as timbre]
+            [clojure.java.io :as io]
+            [integrant.core :as ig]))
 
-<a id="org32bf168"></a>
+(def config-file
+  (if-let [config-file (env :config-file)]
+    config-file
+    "config.edn"))
+
+(defn load-config [config]
+  (-> config
+      io/resource
+      slurp
+      ig/read-string
+      (doto
+       ig/load-namespaces)))
+
+(defn -main
+  [& args]
+  (-> config-file
+      load-config
+      ig/init))
+```
+
+次に REPL で実行する用。 REPL を起動して、 `(start)` で実行、 `(restart)` で再読込して実行、 `(stop)` で停止します。
+
+```clojure
+(ns user)
+
+(defn dev
+  "Load and switch to the 'dev' namespace"
+  []
+  (require 'dev)
+  (in-ns 'dev)
+  (println ":switch to the develop namespace")
+  :loaded)
+```
+
+```clojure
+(ns dev
+  (:require
+   [picture-gallery.core :as pg-core]
+   [integrant.repl :as igr]))
+
+(defn start
+  ([]
+   (start pg-core/config-file))
+  ([config-file]
+   (igr/set-prep! (constantly (pg-core/load-config config-file)))
+   (igr/prep)
+   (igr/init)))
+
+(defn stop []
+  (igr/halt))
+
+(defn restart []
+  (igr/reset-all))
+```
+
+試しに REPL で実行してみましょう。
+
+    user> (dev)
+    :switch to the develop namespace
+    ;; => :loaded
+    dev> (start)
+    ;; => :initiated
+    dev> (restart)
+    :reloading ()
+    ;; => :resumed
+    dev> (stop)
+    ;; => :halted
+    dev> (in-ns 'user)
+    ;; => #namespace[user]
+    user>
+
+<a id="orga872135"></a>
+
+## 環境変数を読み込む
+
+環境変数を読み込むための機構を作ります。
+
+まずはコード。 具体的には、環境変数を読み込むライブラリ `environ` を用いて環境変数を読み込み、それを辞書として返す、ということを行っています。
+
+```clojure
+(ns picture-gallery.infrastructure.env
+  (:require [environ.core :refer [env]]
+            [integrant.core :as ig]
+            [orchestra.spec.test :as st]))
+
+(defn decode-log-level [str-log-level]
+  (condp = str-log-level
+    "trace" :trace
+    "debug" :debug
+    "info" :info
+    "warn" :warn
+    "error" :error
+    "fatal" :fatal
+    "report" :report
+    :info))
+
+;; (start) で実行される部分
+(defmethod ig/init-key ::env [_ _]
+  (println "loading environment via environ")
+  (let [database-url (env :database-url)
+        running (env :env)
+        log-level (decode-log-level (env :log-level))]
+    (println "running in " running)
+    (println "database-url " database-url)
+    (println "log-level " log-level)
+    (when (.contains ["test" "dev"] running)
+      (println "orchestra instrument is active")
+      (st/instrument))
+    {:database-url database-url
+     :running running
+     :log-level log-level}))
+
+;; (stop) で実行される部分
+(defmethod ig/halt-key! ::env [_ _]
+  {})
+```
+
+次に config の更新。
+
+```clojure
+;; resources/config.edn
+{:picture-gallery.infrastructure.env/env {}}
+```
+
+実際に動かしてみましょう。
+
+    user> (dev)
+    :switch to the develop namespace
+    ;; => :loaded
+    dev> (start)
+    loading environment via environ
+    running in  nil
+    database-url  nil
+    log-level  :info
+    ;; => :initiated
+    dev>
+
+なんの環境変数も設定していないので、nil ばかり返ってきますね。
+
+環境変数の設定を書いてみましょう。
+
+環境変数は、1. `export` コマンドを使って宣言する 2. `profiles.clj` に記述する の手段を用いることができますが、今回は 2. を用います。
+
+まず、 `project.clj` の profiles を次のように編集します。
+
+```clojure
+;; project.clj
+{;;...
+ :profiles
+  {:dev [:project/dev :profiles/dev]
+   :repl {:prep-tasks ^:replace ["javac" "compile"]
+          :repl-options {:init-ns user}}
+   :project/dev {:source-paths ["dev/src"]
+                 :resource-paths ["dev/resources"]}
+   :profiles/dev {}
+   :uberjar {:aot :all
+             :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
+   }
+```
+
+次に、 `profiles.clj` を用いて、 profiles/dev を上書きします。
+
+```clojure
+;; profiles.clj
+{:profiles/dev
+ {:env
+  {:env "dev"
+   :database-url "jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs"
+   :log-level "info"}}}
+```
+
+これで準備は完了です。 REPL で実行してみましょう。 **環境変数を更新したので、REPL を立ち上げ直して下さい。**
+
+    user=> (dev)
+    :switch to dev
+    :loaded
+    dev=> (start)
+    loading environment via environ
+    running in  dev
+    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
+    log-level  :info
+    orchestra instrument is active
+    :initiated
+    dev=> exit
+    Bye for now!
+
+次に、 `lein run` を用いて実行してみましょう。 with-profile で **dev** profile を指定します。
+
+    # せっかくなので、 log-level を変えてみます。
+    $ export LOG_LEVEL=error
+    $ lein with-profile dev run
+    Warning: environ value info for key :log-level has been overwritten with error
+    loading environment via environ
+    running in  dev
+    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
+    log-level  :error
+    orchestra instrument is active
+
+<a id="orgd3677ca"></a>
+
+## 環境変数を読み込む CLI の作成
+
+今までは REPL ないしサーバ本体の実行コードで環境変数の読み込みができるようになっていました。 しかし、実用上、サーバ本体の実行コードではなく別の CLI コマンドで機能を実行したいケースが出てくると思います。
+
+別の CLI コマンドで実行できるようにするためのコードを書くには、次の手順が必要です。
+
+1.  該当の config を記述する
+
+    ```clojure
+       ;; resources/cmd/print_env/config.edn
+       {:picture-gallery.infrastructure.env/env {}}
+    ```
+
+    1.  該当の config を読み込んで動かすロジックを書く
+
+        ```clojure
+        ;; src/picture_gallery/cmd/print_env/core.clj
+        (ns picture-gallery.cmd.print-env.core
+          (:gen-class)
+          (:require
+           [picture-gallery.core :as pg-core]
+           [integrant.core :as ig]))
+
+        (defn -main
+          [& args]
+          (let [config-file  "cmd/print_env/config.edn"]
+            (println "print environment variables")
+            (-> config-file
+                pg-core/load-config
+                ig/init)))
+        (-main)
+        ```
+
+2.  実行スクリプトを書く
+
+    ```sh
+    # scripts/print_env.sh
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    lein with-profile dev env -p src/picture_gallery/cmd/print_env/core.clj
+    ```
+
+以上です。 実際に動かしてみましょう。
+
+    $ chmod +x ./scripts/print_env.sh
+    $ ./scripts/print_env.sh
+    print environment variables
+    loading environment via environ
+    running in  dev
+    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
+    log-level  :info
+    orchestra instrument is active
+
+動いていることが確認できますね。
+
+<a id="org3c03489"></a>
 
 # 付録
 
-<a id="orgb2db540"></a>
+<a id="org2621ec2"></a>
+
+## ここまでのディレクトリの確認
+
+ここまででできたディレクトリ構造を再確認します。 `src/picture_gallery` 以下が Clean Architecture を踏襲したソースコード部分です。
+
+    .
+    ├── CHANGELOG.md
+    ├── LICENSE
+    ├── README.md
+    ├── containers           (Dockerize に利用しました)
+    │   ├── api-server
+    │   │   └── Dockerfile
+    │   └── postgres
+    │       └── Dockerfile
+    ├── dev
+    │   ├── resources
+    │   └── src              (integrant と REPL を組み合わせるために利用しました)
+    │       ├── dev.clj
+    │       └── user.clj
+    ├── doc
+    ├── docker-compose.yml   (Dockerize に利用しました)
+    ├── profiles.clj         (環境変数の設定に利用しました)
+    ├── project.clj          (ライブラリの追加/環境変数の設定に利用しました)
+    ├── resources
+    │   ├── cmd              (CLIのために利用しました)
+    │   │   └── print_env
+    │   │       └── config.edn
+    │   └── config.edn       (integrant の config に利用しました)
+    ├── scripts              (CLI のために利用しました)
+    │   └── print_env.sh
+    ├── src
+    │   └── picture_gallery
+    │       ├── cmd          (CLI のために利用しました)
+    │       │   └── print_env
+    │       │       └── core.clj
+    │       ├── core.clj     (integrant の実行のために利用しました)
+    │       ├── domain
+    │       ├── infrastructure
+    │       ├── interface
+    │       ├── usecase
+    │       └── utils
+    ├── target
+    └── test
+        └── picture_gallery
+
+<a id="orgb0468bc"></a>
 
 ## Docker コンテナ内で tmux を走らせる フロー
 
@@ -325,7 +629,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
     root:@xxx:/app# tmux a -t repl
     # (repl session へ復帰)
 
-<a id="orgaf814a6"></a>
+<a id="org5d5f392"></a>
 
 ## Emacs で Clojure 開発を行う Tips
 
