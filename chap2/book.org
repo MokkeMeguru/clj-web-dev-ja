@@ -144,7 +144,7 @@ Rails や Spring といったより便利なフレームワークを用いたサ
 
 ;; ルーティング、HTTP ハンドラ のためのライブラリ
 [ring/ring-jetty-adapter "1.9.1" :exclusions [commons-codec]]
-[metosin/reitit "0.5.12" :exclusions [mvxcvi/puget]]
+[metosin/reitit "0.5.12"]
 [metosin/reitit-swagger "0.5.12"]
 [metosin/reitit-swagger-ui "0.5.12"]
 
@@ -367,7 +367,8 @@ user>
 まずはコード。
 具体的には、環境変数を読み込むライブラリ ~environ~ を用いて環境変数を読み込み、それを辞書として返す、ということを行っています。
 
-#+caption: infrastructure/env
+この部分は入力になるので、 ~infrastructure~ に含められます。
+
 #+BEGIN_SRC clojure
 (ns picture-gallery.infrastructure.env
   (:require [environ.core :refer [env]]
