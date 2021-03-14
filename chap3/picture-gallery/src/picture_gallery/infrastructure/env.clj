@@ -1,7 +1,12 @@
 (ns picture-gallery.infrastructure.env
   (:require [environ.core :refer [env]]
             [integrant.core :as ig]
-            [orchestra.spec.test :as st]))
+            [orchestra.spec.test :as st]
+            [clojure.spec.alpha :as s]))
+
+(s/fdef decode-log-level
+  :args (s/cat :str-log-level string?)
+  :ret #{:trace :debug :info :warn :error :fatal :report})
 
 (defn decode-log-level [str-log-level]
   (condp = str-log-level

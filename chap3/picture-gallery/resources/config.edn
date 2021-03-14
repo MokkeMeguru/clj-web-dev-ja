@@ -1,0 +1,6 @@
+{:picture-gallery.infrastructure.env/env {}
+ :picture-gallery.infrastructure.logger/logger {:env #ig/ref :picture-gallery.infrastructure.env/env}
+ :picture-gallery.infrastructure.router.core/router {:env #ig/ref :picture-gallery.infrastructure.env/env}
+ :picture-gallery.infrastructure.server/server {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                :router #ig/ref :picture-gallery.infrastructure.router.core/router
+                                                :port 3000}}

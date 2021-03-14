@@ -1,21 +1,21 @@
-- [開発環境の Dockerize](#org9be56ad)
-  - [Port の開放](#org716bc14)
-  - [Directory のマウント](#org7fcfc9a)
-  - [動作確認](#orgfa4ee04)
-- [ライブラリの追加](#orgb5a3aaf)
-- [エディタとの接続](#orgda80fdc)
-- [integrant のセットアップ](#org07f58ed)
-  - [integrant と REPL](#org3c226cb)
-  - [環境変数を読み込む](#orga872135)
-  - [環境変数を読み込む CLI の作成](#orgd3677ca)
-- [付録](#org3c03489)
-  - [ここまでのディレクトリの確認](#org2621ec2)
-  - [Docker コンテナ内で tmux を走らせる フロー](#orgb0468bc)
-  - [Emacs で Clojure 開発を行う Tips](#org5d5f392)
+- [開発環境の Dockerize](#orgf3a9071)
+  - [Port の開放](#org8084b4e)
+  - [Directory のマウント](#orgb36083e)
+  - [動作確認](#org6f43941)
+- [ライブラリの追加](#orgf2d7127)
+- [エディタとの接続](#org5297b99)
+- [integrant のセットアップ](#orgfdd4b23)
+  - [integrant と REPL](#orge17151f)
+  - [環境変数を読み込む](#org742fd5d)
+  - [環境変数を読み込む CLI の作成](#orgcb58e6c)
+- [付録](#orgad40d15)
+  - [ここまでのディレクトリの確認](#org26e00d7)
+  - [Docker コンテナ内で tmux を走らせる フロー](#org7ce8d70)
+  - [Emacs で Clojure 開発を行う Tips](#org498251b)
 
 本稿では、Web API サーバを書いていくにあたり必要な、1. 開発環境の Dockerize、2. 基礎的なライブラリの列挙、3. integrant のセットアップを行います。
 
-<a id="org9be56ad"></a>
+<a id="orgf3a9071"></a>
 
 # 開発環境の Dockerize
 
@@ -94,7 +94,7 @@ volumes:
 
 dev_db_volume、lib_data は docker-compose のデータ永続化の機能 (named volume) を用いるために記述されています。
 
-<a id="org716bc14"></a>
+<a id="org8084b4e"></a>
 
 ## Port の開放
 
@@ -106,13 +106,13 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 - `localhost:39998` を通して repl コンテナ内の Clojure インタプリタへ接続するために、 repl/ports に `39998:39998` を追加しています。
 
-<a id="org7fcfc9a"></a>
+<a id="orgb36083e"></a>
 
 ## Directory のマウント
 
 今回作るサーバ picture-gallery のソースコードをそのまま repl コンテナで読み込むために、repl/volumes に `.:/app` としてコンテナ内部の `/app` に picture-gallery フォルダをそのままマウントさせています。
 
-<a id="orgfa4ee04"></a>
+<a id="org6f43941"></a>
 
 ## 動作確認
 
@@ -138,9 +138,9 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 とします。
 
-管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#orgb0468bc)
+管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#org7ce8d70)
 
-<a id="orgb5a3aaf"></a>
+<a id="orgf2d7127"></a>
 
 # ライブラリの追加
 
@@ -158,7 +158,7 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 ;; ルーティング、HTTP ハンドラ のためのライブラリ
 [ring/ring-jetty-adapter "1.9.1" :exclusions [commons-codec]]
-[metosin/reitit "0.5.12" :exclusions [mvxcvi/puget]]
+[metosin/reitit "0.5.12"]
 [metosin/reitit-swagger "0.5.12"]
 [metosin/reitit-swagger-ui "0.5.12"]
 
@@ -202,7 +202,7 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 なお、注意する点として、ライブラリを追加したら、 **REPL は再起動が必要です** 。 `exit` から `lein repl` で再接続して下さい。
 
-<a id="orgda80fdc"></a>
+<a id="org5297b99"></a>
 
 # エディタとの接続
 
@@ -239,7 +239,7 @@ Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、Inteli
 
 なお、Calva そのものの詳細な使い方は、 <https://calva.io/> を参考にして下さい。
 
-<a id="org07f58ed"></a>
+<a id="orgfdd4b23"></a>
 
 # integrant のセットアップ
 
@@ -273,7 +273,7 @@ integrant で重要となるファイルに、 システムの内部構成を記
 
 以降では、integrant に慣れる、ということで 環境変数を読み込むというコンポーネントを作っていきます。
 
-<a id="org3c226cb"></a>
+<a id="orge17151f"></a>
 
 ## integrant と REPL
 
@@ -368,13 +368,15 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     ;; => #namespace[user]
     user>
 
-<a id="orga872135"></a>
+<a id="org742fd5d"></a>
 
 ## 環境変数を読み込む
 
 環境変数を読み込むための機構を作ります。
 
 まずはコード。 具体的には、環境変数を読み込むライブラリ `environ` を用いて環境変数を読み込み、それを辞書として返す、ということを行っています。
+
+この部分は入力になるので、 `infrastructure` に含められます。
 
 ```clojure
 (ns picture-gallery.infrastructure.env
@@ -440,11 +442,21 @@ integrant を使うためには、 config を書き、読み込む機構を書�
 
 環境変数は、1. `export` コマンドを使って宣言する 2. `profiles.clj` に記述する の手段を用いることができますが、今回は 2. を用います。
 
-まず、 `project.clj` の profiles を次のように編集します。
+まず、 `project.clj` の profiles を次のように編集し、plugin を追加します。
 
 ```clojure
 ;; project.clj
 {;;...
+ :plugins
+ [;; 開発のためのプラグイン
+  [lein-ancient "0.6.15"]
+  ;; cli command's execution helper (後の章で必要)
+  [lein-exec "0.3.7"]
+  ;; test coverage
+  [lein-cloverage "1.2.2"]
+  ;; environ in leiningen (leiningen と environ を組み合わせるために必要な plugin)
+  [lein-environ "1.1.0"]]
+
  :profiles
   {:dev [:project/dev :profiles/dev]
    :repl {:prep-tasks ^:replace ["javac" "compile"]
@@ -495,7 +507,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     log-level  :error
     orchestra instrument is active
 
-<a id="orgd3677ca"></a>
+<a id="orgcb58e6c"></a>
 
 ## 環境変数を読み込む CLI の作成
 
@@ -553,11 +565,11 @@ integrant を使うためには、 config を書き、読み込む機構を書�
 
 動いていることが確認できますね。
 
-<a id="org3c03489"></a>
+<a id="orgad40d15"></a>
 
 # 付録
 
-<a id="org2621ec2"></a>
+<a id="org26e00d7"></a>
 
 ## ここまでのディレクトリの確認
 
@@ -603,7 +615,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     └── test
         └── picture_gallery
 
-<a id="orgb0468bc"></a>
+<a id="org7ce8d70"></a>
 
 ## Docker コンテナ内で tmux を走らせる フロー
 
@@ -629,7 +641,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     root:@xxx:/app# tmux a -t repl
     # (repl session へ復帰)
 
-<a id="org5d5f392"></a>
+<a id="org498251b"></a>
 
 ## Emacs で Clojure 開発を行う Tips
 
