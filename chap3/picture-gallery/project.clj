@@ -14,7 +14,7 @@
 
                  ;; ルーティング、HTTP ハンドラ のためのライブラリ
                  [ring/ring-jetty-adapter "1.9.1" :exclusions [commons-codec]]
-                 [metosin/reitit "0.5.12" :exclusions [mvxcvi/puget]]
+                 [metosin/reitit "0.5.12"]
                  [metosin/reitit-swagger "0.5.12"]
                  [metosin/reitit-swagger-ui "0.5.12"]
 

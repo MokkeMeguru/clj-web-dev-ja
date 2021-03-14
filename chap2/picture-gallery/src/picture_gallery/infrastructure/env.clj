@@ -29,5 +29,5 @@
      :running running
      :log-level log-level}))
 
-(defmethod ig/halt-key! ::env [_ _]
-  {})
+;; (defmethod ig/halt-key! ::env [_ _]
+;;   nil)

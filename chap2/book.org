@@ -404,7 +404,7 @@ user>
 
 ;; (stop) で実行される部分
 (defmethod ig/halt-key! ::env [_ _]
-  {})
+  nil)
 #+END_SRC
 
 次に config の更新。
