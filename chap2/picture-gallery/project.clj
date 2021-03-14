@@ -30,6 +30,7 @@
 
                  ;; ロギング処理のためのライブラリ
                  [com.taoensso/timbre "5.1.2"]
+                 [com.fzakaria/slf4j-timbre "0.3.20"]
 
                  ;; データベースとの通信を行うためのライブラリ
                  [honeysql "1.0.461"]
