@@ -172,10 +172,9 @@ REPL で ~(restart)~ を評価してみます。
 (dev)=> (restart)
 loading environment via environ
 running in  dev
-database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
 log-level  :info
 orchestra instrument is active
-2021-03-13T14:41:44.588Z b343f5d53e9e INFO [picture-gallery.infrastructure.router.core:72] - router got: env {:database-url "jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs", :running "dev", :log-level :info}
+2021-03-13T14:41:44.588Z b343f5d53e9e INFO [picture-gallery.infrastructure.router.core:72] - router got: env {:running "dev", :log-level :info}
 2021-03-13T14:41:44.592Z b343f5d53e9e INFO [picture-gallery.infrastructure.server:7] - server is running in port 3000
 2021-03-13T14:41:44.592Z b343f5d53e9e INFO [picture-gallery.infrastructure.server:8] - router is  clojure.lang.AFunction$1@22b20c19
 ;; => :initiated

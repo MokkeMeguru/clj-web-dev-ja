@@ -1,21 +1,21 @@
-- [開発環境の Dockerize](#orgf3a9071)
-  - [Port の開放](#org8084b4e)
-  - [Directory のマウント](#orgb36083e)
-  - [動作確認](#org6f43941)
-- [ライブラリの追加](#orgf2d7127)
-- [エディタとの接続](#org5297b99)
-- [integrant のセットアップ](#orgfdd4b23)
-  - [integrant と REPL](#orge17151f)
-  - [環境変数を読み込む](#org742fd5d)
-  - [環境変数を読み込む CLI の作成](#orgcb58e6c)
-- [付録](#orgad40d15)
-  - [ここまでのディレクトリの確認](#org26e00d7)
-  - [Docker コンテナ内で tmux を走らせる フロー](#org7ce8d70)
-  - [Emacs で Clojure 開発を行う Tips](#org498251b)
+- [開発環境の Dockerize](#org11f08d5)
+  - [Port の開放](#org2453172)
+  - [Directory のマウント](#org486b8e5)
+  - [動作確認](#org1647546)
+- [ライブラリの追加](#orgd946ee2)
+- [エディタとの接続](#orgb40a7e5)
+- [integrant のセットアップ](#orgc65d835)
+  - [integrant と REPL](#orgc746589)
+  - [環境変数を読み込む](#org7410256)
+  - [環境変数を読み込む CLI の作成](#org4c03865)
+- [付録](#org4d03ddd)
+  - [ここまでのディレクトリの確認](#org4a1117d)
+  - [Docker コンテナ内で tmux を走らせる フロー](#org9ccc919)
+  - [Emacs で Clojure 開発を行う Tips](#org6cf4821)
 
 本稿では、Web API サーバを書いていくにあたり必要な、1. 開発環境の Dockerize、2. 基礎的なライブラリの列挙、3. integrant のセットアップを行います。
 
-<a id="orgf3a9071"></a>
+<a id="org11f08d5"></a>
 
 # 開発環境の Dockerize
 
@@ -94,7 +94,7 @@ volumes:
 
 dev_db_volume、lib_data は docker-compose のデータ永続化の機能 (named volume) を用いるために記述されています。
 
-<a id="org8084b4e"></a>
+<a id="org2453172"></a>
 
 ## Port の開放
 
@@ -106,13 +106,13 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 - `localhost:39998` を通して repl コンテナ内の Clojure インタプリタへ接続するために、 repl/ports に `39998:39998` を追加しています。
 
-<a id="orgb36083e"></a>
+<a id="org486b8e5"></a>
 
 ## Directory のマウント
 
 今回作るサーバ picture-gallery のソースコードをそのまま repl コンテナで読み込むために、repl/volumes に `.:/app` としてコンテナ内部の `/app` に picture-gallery フォルダをそのままマウントさせています。
 
-<a id="org6f43941"></a>
+<a id="org1647546"></a>
 
 ## 動作確認
 
@@ -138,9 +138,9 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 とします。
 
-管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#org7ce8d70)
+管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#org9ccc919)
 
-<a id="orgf2d7127"></a>
+<a id="orgd946ee2"></a>
 
 # ライブラリの追加
 
@@ -154,10 +154,10 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 [integrant/repl "0.3.2"]
 
 ;; firebase auth のためのライブラリ
-[com.google.firebase/firebase-admin "7.1.0" :exclusions [com.google.http-client/google-http-client]]
+[com.google.firebase/firebase-admin "7.1.0"]
 
 ;; ルーティング、HTTP ハンドラ のためのライブラリ
-[ring/ring-jetty-adapter "1.9.1" :exclusions [commons-codec]]
+[ring/ring-jetty-adapter "1.9.1"]
 [metosin/reitit "0.5.12"]
 [metosin/reitit-swagger "0.5.12"]
 [metosin/reitit-swagger-ui "0.5.12"]
@@ -167,17 +167,18 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 [com.fasterxml.jackson.core/jackson-core "2.12.2"]
 
 ;; 暗号化通信のためのライブラリ
-[buddy/buddy-hashers "1.7.0" :exclusions [commons-codec]]
+[buddy/buddy-hashers "1.7.0" ]
 
 ;; 環境変数の読み込みのためのライブラリ
 [environ "1.2.0"]
 
 ;; ロギング処理のためのライブラリ
 [com.taoensso/timbre "5.1.2"]
+[com.fzakaria/slf4j-timbre "0.3.20"]
 
 ;; データベースとの通信を行うためのライブラリ
 [honeysql "1.0.461"]
-[seancorfield/next.jdbc "1.1.643" :exclusions [org.clojure/tools.logging]]
+[seancorfield/next.jdbc "1.1.643"]
 [hikari-cp "2.13.0"]
 [org.postgresql/postgresql "42.2.19"]
 [net.ttddyy/datasource-proxy "1.7"]
@@ -202,7 +203,7 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 なお、注意する点として、ライブラリを追加したら、 **REPL は再起動が必要です** 。 `exit` から `lein repl` で再接続して下さい。
 
-<a id="org5297b99"></a>
+<a id="orgb40a7e5"></a>
 
 # エディタとの接続
 
@@ -239,7 +240,7 @@ Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、Inteli
 
 なお、Calva そのものの詳細な使い方は、 <https://calva.io/> を参考にして下さい。
 
-<a id="orgfdd4b23"></a>
+<a id="orgc65d835"></a>
 
 # integrant のセットアップ
 
@@ -273,7 +274,7 @@ integrant で重要となるファイルに、 システムの内部構成を記
 
 以降では、integrant に慣れる、ということで 環境変数を読み込むというコンポーネントを作っていきます。
 
-<a id="orge17151f"></a>
+<a id="orgc746589"></a>
 
 ## integrant と REPL
 
@@ -368,7 +369,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     ;; => #namespace[user]
     user>
 
-<a id="org742fd5d"></a>
+<a id="org7410256"></a>
 
 ## 環境変数を読み込む
 
@@ -398,22 +399,19 @@ integrant を使うためには、 config を書き、読み込む機構を書�
 ;; (start) で実行される部分
 (defmethod ig/init-key ::env [_ _]
   (println "loading environment via environ")
-  (let [database-url (env :database-url)
-        running (env :env)
-        log-level (decode-log-level (env :log-level))]
+  (let [running (env :env)
+    log-level (decode-log-level (env :log-level))]
     (println "running in " running)
-    (println "database-url " database-url)
     (println "log-level " log-level)
     (when (.contains ["test" "dev"] running)
       (println "orchestra instrument is active")
       (st/instrument))
-    {:database-url database-url
-     :running running
+    {:running running
      :log-level log-level}))
 
 ;; (stop) で実行される部分
 (defmethod ig/halt-key! ::env [_ _]
-  {})
+  nil)
 ```
 
 次に config の更新。
@@ -431,7 +429,6 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     dev> (start)
     loading environment via environ
     running in  nil
-    database-url  nil
     log-level  :info
     ;; => :initiated
     dev>
@@ -476,7 +473,6 @@ integrant を使うためには、 config を書き、読み込む機構を書�
 {:profiles/dev
  {:env
   {:env "dev"
-   :database-url "jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs"
    :log-level "info"}}}
 ```
 
@@ -488,7 +484,6 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     dev=> (start)
     loading environment via environ
     running in  dev
-    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
     log-level  :info
     orchestra instrument is active
     :initiated
@@ -503,11 +498,10 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     Warning: environ value info for key :log-level has been overwritten with error
     loading environment via environ
     running in  dev
-    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
     log-level  :error
     orchestra instrument is active
 
-<a id="orgcb58e6c"></a>
+<a id="org4c03865"></a>
 
 ## 環境変数を読み込む CLI の作成
 
@@ -559,17 +553,16 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     print environment variables
     loading environment via environ
     running in  dev
-    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
     log-level  :info
     orchestra instrument is active
 
 動いていることが確認できますね。
 
-<a id="orgad40d15"></a>
+<a id="org4d03ddd"></a>
 
 # 付録
 
-<a id="org26e00d7"></a>
+<a id="org4a1117d"></a>
 
 ## ここまでのディレクトリの確認
 
@@ -615,7 +608,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     └── test
         └── picture_gallery
 
-<a id="org7ce8d70"></a>
+<a id="org9ccc919"></a>
 
 ## Docker コンテナ内で tmux を走らせる フロー
 
@@ -641,7 +634,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     root:@xxx:/app# tmux a -t repl
     # (repl session へ復帰)
 
-<a id="org498251b"></a>
+<a id="org6cf4821"></a>
 
 ## Emacs で Clojure 開発を行う Tips
 

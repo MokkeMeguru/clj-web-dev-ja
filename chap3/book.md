@@ -1,16 +1,16 @@
-- [開発の流れの確認](#org84601d1)
-- [HTTP サーバを建てる](#org36f6396)
-- [Test API の作成](#orgc026840)
-  - [Swagger のある生活](#orga95de22)
-  - [ping - pong フローの確認](#org157f59f)
-  - [domain の作成](#org67f6dfb)
-  - [ルーティングを設定し、 Swagger を生やす](#org65a5c2c)
-  - [swagger で API を試す](#orgfcbf001)
-- [付録 & 捕捉](#org7d821e7)
-  - [logging 機能の設定](#org4548512)
-  - [コードの全評価](#org302a25e)
+- [開発の流れの確認](#org0ac9762)
+- [HTTP サーバを建てる](#org67c4688)
+- [Test API の作成](#org6de44c5)
+  - [Swagger のある生活](#org6275beb)
+  - [ping - pong フローの確認](#orgecae71d)
+  - [domain の作成](#orgf57a730)
+  - [ルーティングを設定し、 Swagger を生やす](#org0819ade)
+  - [swagger で API を試す](#org1109dd4)
+- [付録 & 捕捉](#org9a07caa)
+  - [logging 機能の設定](#org4b6d1cd)
+  - [コードの全評価](#org54f1dd9)
 
-<a id="org84601d1"></a>
+<a id="org0ac9762"></a>
 
 # 開発の流れの確認
 
@@ -40,7 +40,7 @@
 
 基本的には 3, 4 を繰り返すことで開発を進めていきます。
 
-<a id="org36f6396"></a>
+<a id="org67c4688"></a>
 
 # HTTP サーバを建てる
 
@@ -171,10 +171,9 @@ REPL で `(restart)` を評価してみます。
     (dev)=> (restart)
     loading environment via environ
     running in  dev
-    database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
     log-level  :info
     orchestra instrument is active
-    2021-03-13T14:41:44.588Z b343f5d53e9e INFO [picture-gallery.infrastructure.router.core:72] - router got: env {:database-url "jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs", :running "dev", :log-level :info}
+    2021-03-13T14:41:44.588Z b343f5d53e9e INFO [picture-gallery.infrastructure.router.core:72] - router got: env {:running "dev", :log-level :info}
     2021-03-13T14:41:44.592Z b343f5d53e9e INFO [picture-gallery.infrastructure.server:7] - server is running in port 3000
     2021-03-13T14:41:44.592Z b343f5d53e9e INFO [picture-gallery.infrastructure.server:8] - router is  clojure.lang.AFunction$1@22b20c19
     ;; => :initiated
@@ -182,7 +181,7 @@ REPL で `(restart)` を評価してみます。
 
 サーバが立ち上がったのを確認することができました。
 
-<a id="orgc026840"></a>
+<a id="org6de44c5"></a>
 
 # Test API の作成
 
@@ -192,7 +191,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
 
 更に今後の開発のために、 Swagger と呼ばれる API の仕様記述のためのツールを使ってブラウザ上で ping - pong API をテストできるようにします。
 
-<a id="orga95de22"></a>
+<a id="org6275beb"></a>
 
 ## Swagger のある生活
 
@@ -204,7 +203,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
 
 本ガイドでは、Swagger を **サーバ側のコードから自動生成する** ことで、Swagger の利用を行っていきます。
 
-<a id="org157f59f"></a>
+<a id="orgecae71d"></a>
 
 ## ping - pong フローの確認
 
@@ -238,7 +237,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
    :comment "<optional string>"}
   ```
 
-<a id="org67f6dfb"></a>
+<a id="orgf57a730"></a>
 
 ## domain の作成
 
@@ -294,7 +293,7 @@ REPL で動作確認をしてみましょう。
 
 なお、動作確認、テストの段階で仕様に漏れがあれば、修正を施しましょう。
 
-<a id="org65a5c2c"></a>
+<a id="org0819ade"></a>
 
 ## ルーティングを設定し、 Swagger を生やす
 
@@ -453,13 +452,13 @@ API でどのようなデータをやり取りするのかがわかったとこ�
     )))
 ```
 
-すべて記述するとともに、 **実装した関数を評価したら [4.2](#org302a25e)** 、 `(restart)` より環境を更新します。 なお、実装した関数を評価していないと、正しく動作しません。
+すべて記述するとともに、 **実装した関数を評価したら [4.2](#org54f1dd9)** 、 `(restart)` より環境を更新します。 なお、実装した関数を評価していないと、正しく動作しません。
 
 Swagger にアクセスして確かめてみましょう。ブラウザの `localhost:3000/api` より Swagger の画面にアクセスできます。
 
 ![img](./img/swagger.png)
 
-<a id="orgfcbf001"></a>
+<a id="org1109dd4"></a>
 
 ## swagger で API を試す
 
@@ -471,7 +470,7 @@ Swagger にアクセスして確かめてみましょう。ブラウザの `loca
 
 と返ってきます。これは期待通りですね。
 
-ping に &ldquo;hello&rdquo; を入力すると、以下のようなエラーが返ってきます。これは、controller ([3.4](#org65a5c2c)) で `s/conform` した際に、 domain の ping の仕様 (`:picture-gallery.domain/sample/ping`) に違反しているためです。
+ping に &ldquo;hello&rdquo; を入力すると、以下のようなエラーが返ってきます。これは、controller ([3.4](#org0819ade)) で `s/conform` した際に、 domain の ping の仕様 (`:picture-gallery.domain/sample/ping`) に違反しているためです。
 
 ```json
 {
@@ -486,7 +485,7 @@ ping に &ldquo;hello&rdquo; を入力すると、以下のようなエラーが
 { "pong": "pong" }
 ```
 
-usecase ([3.4](#org65a5c2c)) を見ると、 comment を output モデルに追加していないことがわかるので、これを追加します。 つまり以下のように修正します。
+usecase ([3.4](#org0819ade)) を見ると、 comment を output モデルに追加していないことがわかるので、これを追加します。 つまり以下のように修正します。
 
 ```clojure
 (defn ping-pong [input-model]
@@ -508,11 +507,11 @@ usecase ([3.4](#org65a5c2c)) を見ると、 comment を output モデルに追�
 
 期待する結果を得ることができました。
 
-<a id="org7d821e7"></a>
+<a id="org9a07caa"></a>
 
 # 付録 & 捕捉
 
-<a id="org4548512"></a>
+<a id="org4b6d1cd"></a>
 
 ## logging 機能の設定
 
@@ -536,7 +535,7 @@ log の設定機能を追加します。 **timbre** というライブラリを�
  :picture-gallery.infrastructure.logger/logger {:env #ig/ref :picture-gallery.infrastructure.env/env}}
 ```
 
-<a id="org302a25e"></a>
+<a id="org54f1dd9"></a>
 
 ## コードの全評価
 
