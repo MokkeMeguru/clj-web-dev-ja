@@ -440,8 +440,6 @@ dev>
  :plugins
  [;; 開発のためのプラグイン
   [lein-ancient "0.6.15"]
-  ;; cli command's execution helper (後の章で必要)
-  [lein-exec "0.3.7"]
   ;; test coverage
   [lein-cloverage "1.2.2"]
   ;; environ in leiningen (leiningen と environ を組み合わせるために必要な plugin)
@@ -538,7 +536,7 @@ orchestra instrument is active
 #!/usr/bin/env bash
 set -euo pipefail
 
-lein with-profile dev env -p src/picture_gallery/cmd/print_env/core.clj
+lein with-profile dev run -m picture-gallery.cmd.print-env.core/-main
   #+END_SRC
 
 以上です。

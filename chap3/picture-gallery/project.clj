@@ -61,8 +61,6 @@
    ;; cider (emacs development tool)
    [cider/cider-nrepl "0.25.4"]
    [refactor-nrepl "2.5.0"]
-   ;; cli command's execution helper
-   [lein-exec "0.3.7"]
    ;; test coverage
    [lein-cloverage "1.2.2"]
    ;; environ in leiningen

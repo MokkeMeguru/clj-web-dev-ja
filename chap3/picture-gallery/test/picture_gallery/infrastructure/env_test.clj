@@ -25,7 +25,6 @@
     (let [system (ig/init {:picture-gallery.infrastructure.env/env {}})
           init-result (:picture-gallery.infrastructure.env/env system)]
       (t/is (map? init-result))
-      (t/is (contains? init-result :database-url))
       (t/is (contains? init-result :running))
       (t/is (contains? init-result :log-level))
       (t/is (nil? (ig/halt! system))))))
