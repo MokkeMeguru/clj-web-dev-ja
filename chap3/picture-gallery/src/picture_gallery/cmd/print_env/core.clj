@@ -11,4 +11,3 @@
     (-> config-file
         pg-core/load-config
         ig/init)))
-(-main)

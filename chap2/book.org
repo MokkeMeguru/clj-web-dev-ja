@@ -534,7 +534,6 @@ orchestra instrument is active
    #+BEGIN_SRC sh
 # scripts/print_env.sh
 #!/usr/bin/env bash
-set -euo pipefail
 
 lein with-profile dev run -m picture-gallery.cmd.print-env.core/-main
   #+END_SRC
