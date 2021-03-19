@@ -24,7 +24,8 @@
 
    [reitit.dev.pretty :as pretty]
 
-   [picture-gallery.infrastructure.router.sample :as sample-router]))
+   [picture-gallery.infrastructure.router.sample :as sample-router]
+   [picture-gallery.infrastructure.router.auth :as auth-router]))
 
 (defn app []
   (ring/ring-handler
@@ -41,7 +42,8 @@
 
              :handler (swagger/create-swagger-handler)}}]
      ["/api"
-      (sample-router/sample-router)]]
+      (sample-router/sample-router)
+      (auth-router/auth-router)]]
 
     {:exception pretty/exception
      :data {:coercion reitit.coercion.spec/coercion

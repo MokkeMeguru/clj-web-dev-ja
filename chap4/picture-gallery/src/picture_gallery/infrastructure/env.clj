@@ -2,7 +2,8 @@
   (:require [environ.core :refer [env]]
             [integrant.core :as ig]
             [orchestra.spec.test :as st]
-            [clojure.spec.alpha :as s]))
+            [clojure.spec.alpha :as s])
+  (:import (com.google.auth.oauth2 GoogleCredentials)))
 
 (s/fdef decode-log-level
   :args (s/cat :str-log-level string?)
@@ -19,20 +20,32 @@
     "report" :report
     :info))
 
+(defn get-database-options []
+  {:adapter (env :database-adapter)
+   :database-name (env :database-name)
+   :username (env :database-username)
+   :password (env :database-password)
+   :server-name (env :database-server-name)
+   :port-number (Integer/parseInt (env :database-port-number))})
+
 (defmethod ig/init-key ::env [_ _]
   (println "loading environment via environ")
-  (let [database-url (env :database-url)
+  (let [database-options (get-database-options)
         running (env :env)
+        migrations-folder (env :migrations-folder)
         log-level (decode-log-level (env :log-level))]
     (println "running in " running)
-    (println "database-url " database-url)
     (println "log-level " log-level)
+    (println "migrations-folder" migrations-folder)
+    (println "database options" database-options)
     (when (.contains ["test" "dev"] running)
       (println "orchestra instrument is active")
       (st/instrument))
-    {:database-url database-url
+    {:database-options database-options
      :running running
-     :log-level log-level}))
+     :migrations-folder migrations-folder
+     :log-level log-level
+     :firebase-credentials (GoogleCredentials/getApplicationDefault)}))
 
 ;; (defmethod ig/halt-key! ::env [_ _]
 ;;   nil)

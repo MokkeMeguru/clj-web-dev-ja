@@ -10,3 +10,6 @@
 (defn input-data-is-invalid [explain-str]
   {:status 422 :body {:code 1 :message (str "input data is invalid: " explain-str)}})
 
+(def expired-id-token {:status 400 :body {:code 1701 :message "the firebase token is expired"}})
+(def invalid-id-token {:status 400 :body {:code 1702 :message "the firebase token is invalid"}})
+(def unknown-id-token {:status 400 :body {:code 1703 :message "the firebase token is something wrong"}})

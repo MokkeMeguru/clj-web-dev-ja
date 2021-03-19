@@ -1,0 +1,2 @@
+{:picture-gallery.infrastructure.env/env {}
+ :picture-gallery.infrastructure.sql.migrate/migration {:env #ig/ref :picture-gallery.infrastructure.env/env}}

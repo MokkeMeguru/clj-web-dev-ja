@@ -10,10 +10,10 @@
                  [integrant/repl "0.3.2"]
 
                  ;; firebase auth のためのライブラリ
-                 [com.google.firebase/firebase-admin "7.1.0" :exclusions [com.google.http-client/google-http-client]]
+                 [com.google.firebase/firebase-admin "7.1.0"]
 
                  ;; ルーティング、HTTP ハンドラ のためのライブラリ
-                 [ring/ring-jetty-adapter "1.9.1" :exclusions [commons-codec]]
+                 [ring/ring-jetty-adapter "1.9.1"]
                  [metosin/reitit "0.5.12"]
                  [metosin/reitit-swagger "0.5.12"]
                  [metosin/reitit-swagger-ui "0.5.12"]
@@ -23,7 +23,7 @@
                  [com.fasterxml.jackson.core/jackson-core "2.12.2"]
 
                  ;; 暗号化通信のためのライブラリ
-                 [buddy/buddy-hashers "1.7.0" :exclusions [commons-codec]]
+                 [buddy/buddy-hashers "1.7.0"]
 
                  ;; 環境変数の読み込みのためのライブラリ
                  [environ "1.2.0"]
@@ -34,7 +34,7 @@
 
                  ;; データベースとの通信を行うためのライブラリ
                  [honeysql "1.0.461"]
-                 [seancorfield/next.jdbc "1.1.643" :exclusions [org.clojure/tools.logging]]
+                 [seancorfield/next.jdbc "1.1.646"]
                  [hikari-cp "2.13.0"]
                  [org.postgresql/postgresql "42.2.19"]
                  [net.ttddyy/datasource-proxy "1.7"]
@@ -61,8 +61,6 @@
    ;; cider (emacs development tool)
    [cider/cider-nrepl "0.25.4"]
    [refactor-nrepl "2.5.0"]
-   ;; cli command's execution helper
-   [lein-exec "0.3.7"]
    ;; test coverage
    [lein-cloverage "1.2.2"]
    ;; environ in leiningen
@@ -72,11 +70,17 @@
   :target-path "target/%s"
   :profiles
   {:dev [:project/dev :profiles/dev]
-   :repl {:prep-tasks ^:replace ["javac" "compile"]
-          :repl-options {:init-ns user}}
    :project/dev {:source-paths ["dev/src"]
                  :resource-paths ["dev/resources"]}
    :profiles/dev {}
+
+   :test [:project/test :profiles/test]
+   :project/test {:source-paths ["dev/src"]
+                  :resource-paths ["dev/resources"]}
+   :profiles/test {}
+
+   :repl {:prep-tasks ^:replace ["javac" "compile"]
+          :repl-options {:init-ns user}}
    :uberjar {:aot :all
              :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}}
 

@@ -1,21 +1,21 @@
-- [開発環境の Dockerize](#org11f08d5)
-  - [Port の開放](#org2453172)
-  - [Directory のマウント](#org486b8e5)
-  - [動作確認](#org1647546)
-- [ライブラリの追加](#orgd946ee2)
-- [エディタとの接続](#orgb40a7e5)
-- [integrant のセットアップ](#orgc65d835)
-  - [integrant と REPL](#orgc746589)
-  - [環境変数を読み込む](#org7410256)
-  - [環境変数を読み込む CLI の作成](#org4c03865)
-- [付録](#org4d03ddd)
-  - [ここまでのディレクトリの確認](#org4a1117d)
-  - [Docker コンテナ内で tmux を走らせる フロー](#org9ccc919)
-  - [Emacs で Clojure 開発を行う Tips](#org6cf4821)
+- [開発環境の Dockerize](#org2317877)
+  - [Port の開放](#org6cb8f73)
+  - [Directory のマウント](#org95ee502)
+  - [動作確認](#orgd1ac994)
+- [ライブラリの追加](#org8682b00)
+- [エディタとの接続](#orgb6ff216)
+- [integrant のセットアップ](#orgf8a114b)
+  - [integrant と REPL](#org7be26ff)
+  - [環境変数を読み込む](#org3b98e3e)
+  - [環境変数を読み込む CLI の作成](#org838c828)
+- [付録](#org4f91800)
+  - [ここまでのディレクトリの確認](#org630f578)
+  - [Docker コンテナ内で tmux を走らせる フロー](#org7e49fac)
+  - [Emacs で Clojure 開発を行う Tips](#orga976470)
 
 本稿では、Web API サーバを書いていくにあたり必要な、1. 開発環境の Dockerize、2. 基礎的なライブラリの列挙、3. integrant のセットアップを行います。
 
-<a id="org11f08d5"></a>
+<a id="org2317877"></a>
 
 # 開発環境の Dockerize
 
@@ -94,7 +94,7 @@ volumes:
 
 dev_db_volume、lib_data は docker-compose のデータ永続化の機能 (named volume) を用いるために記述されています。
 
-<a id="org2453172"></a>
+<a id="org6cb8f73"></a>
 
 ## Port の開放
 
@@ -106,13 +106,13 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 - `localhost:39998` を通して repl コンテナ内の Clojure インタプリタへ接続するために、 repl/ports に `39998:39998` を追加しています。
 
-<a id="org486b8e5"></a>
+<a id="org95ee502"></a>
 
 ## Directory のマウント
 
 今回作るサーバ picture-gallery のソースコードをそのまま repl コンテナで読み込むために、repl/volumes に `.:/app` としてコンテナ内部の `/app` に picture-gallery フォルダをそのままマウントさせています。
 
-<a id="org1647546"></a>
+<a id="orgd1ac994"></a>
 
 ## 動作確認
 
@@ -138,9 +138,9 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 とします。
 
-管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#org9ccc919)
+管理のために、 Docker コンテナ内で tmux や byobu といったツールを利用すると良いでしょう。 [5.2](#org7e49fac)
 
-<a id="orgd946ee2"></a>
+<a id="org8682b00"></a>
 
 # ライブラリの追加
 
@@ -203,7 +203,7 @@ docker-compose で走る Docker コンテナの内部と交信するために、
 
 なお、注意する点として、ライブラリを追加したら、 **REPL は再起動が必要です** 。 `exit` から `lein repl` で再接続して下さい。
 
-<a id="orgb40a7e5"></a>
+<a id="orgb6ff216"></a>
 
 # エディタとの接続
 
@@ -240,7 +240,7 @@ Clojure の REPL と連携できるエディタは Emacs、Vim、VSCode、Inteli
 
 なお、Calva そのものの詳細な使い方は、 <https://calva.io/> を参考にして下さい。
 
-<a id="orgc65d835"></a>
+<a id="orgf8a114b"></a>
 
 # integrant のセットアップ
 
@@ -274,7 +274,7 @@ integrant で重要となるファイルに、 システムの内部構成を記
 
 以降では、integrant に慣れる、ということで 環境変数を読み込むというコンポーネントを作っていきます。
 
-<a id="orgc746589"></a>
+<a id="org7be26ff"></a>
 
 ## integrant と REPL
 
@@ -369,7 +369,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     ;; => #namespace[user]
     user>
 
-<a id="org7410256"></a>
+<a id="org3b98e3e"></a>
 
 ## 環境変数を読み込む
 
@@ -447,8 +447,6 @@ integrant を使うためには、 config を書き、読み込む機構を書�
  :plugins
  [;; 開発のためのプラグイン
   [lein-ancient "0.6.15"]
-  ;; cli command's execution helper (後の章で必要)
-  [lein-exec "0.3.7"]
   ;; test coverage
   [lein-cloverage "1.2.2"]
   ;; environ in leiningen (leiningen と environ を組み合わせるために必要な plugin)
@@ -501,7 +499,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     log-level  :error
     orchestra instrument is active
 
-<a id="org4c03865"></a>
+<a id="org838c828"></a>
 
 ## 環境変数を読み込む CLI の作成
 
@@ -541,9 +539,8 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     ```sh
     # scripts/print_env.sh
     #!/usr/bin/env bash
-    set -euo pipefail
 
-    lein with-profile dev env -p src/picture_gallery/cmd/print_env/core.clj
+    lein with-profile dev run -m picture-gallery.cmd.print-env.core/-main
     ```
 
 以上です。 実際に動かしてみましょう。
@@ -558,11 +555,11 @@ integrant を使うためには、 config を書き、読み込む機構を書�
 
 動いていることが確認できますね。
 
-<a id="org4d03ddd"></a>
+<a id="org4f91800"></a>
 
 # 付録
 
-<a id="org4a1117d"></a>
+<a id="org630f578"></a>
 
 ## ここまでのディレクトリの確認
 
@@ -608,7 +605,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     └── test
         └── picture_gallery
 
-<a id="org9ccc919"></a>
+<a id="org7e49fac"></a>
 
 ## Docker コンテナ内で tmux を走らせる フロー
 
@@ -634,7 +631,7 @@ integrant を使うためには、 config を書き、読み込む機構を書�
     root:@xxx:/app# tmux a -t repl
     # (repl session へ復帰)
 
-<a id="org6cf4821"></a>
+<a id="orga976470"></a>
 
 ## Emacs で Clojure 開発を行う Tips
 

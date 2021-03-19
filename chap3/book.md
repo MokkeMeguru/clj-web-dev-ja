@@ -1,16 +1,16 @@
-- [開発の流れの確認](#org0ac9762)
-- [HTTP サーバを建てる](#org67c4688)
-- [Test API の作成](#org6de44c5)
-  - [Swagger のある生活](#org6275beb)
-  - [ping - pong フローの確認](#orgecae71d)
-  - [domain の作成](#orgf57a730)
-  - [ルーティングを設定し、 Swagger を生やす](#org0819ade)
-  - [swagger で API を試す](#org1109dd4)
-- [付録 & 捕捉](#org9a07caa)
-  - [logging 機能の設定](#org4b6d1cd)
-  - [コードの全評価](#org54f1dd9)
+- [開発の流れの確認](#orgc3d22b3)
+- [HTTP サーバを建てる](#org45d0e1d)
+- [Test API の作成](#orgc0f1dd2)
+  - [Swagger のある生活](#org4459f98)
+  - [ping - pong フローの確認](#orgb412673)
+  - [domain の作成](#orge324fb7)
+  - [ルーティングを設定し、 Swagger を生やす](#orgd6c82eb)
+  - [swagger で API を試す](#orga21219d)
+- [付録 & 捕捉](#orgd2f6ccb)
+  - [logging 機能の設定](#org874fc5b)
+  - [コードの全評価](#org0edb2b1)
 
-<a id="org0ac9762"></a>
+<a id="orgc3d22b3"></a>
 
 # 開発の流れの確認
 
@@ -40,7 +40,7 @@
 
 基本的には 3, 4 を繰り返すことで開発を進めていきます。
 
-<a id="org67c4688"></a>
+<a id="org45d0e1d"></a>
 
 # HTTP サーバを建てる
 
@@ -181,7 +181,7 @@ REPL で `(restart)` を評価してみます。
 
 サーバが立ち上がったのを確認することができました。
 
-<a id="org6de44c5"></a>
+<a id="orgc0f1dd2"></a>
 
 # Test API の作成
 
@@ -191,7 +191,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
 
 更に今後の開発のために、 Swagger と呼ばれる API の仕様記述のためのツールを使ってブラウザ上で ping - pong API をテストできるようにします。
 
-<a id="org6275beb"></a>
+<a id="org4459f98"></a>
 
 ## Swagger のある生活
 
@@ -203,7 +203,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
 
 本ガイドでは、Swagger を **サーバ側のコードから自動生成する** ことで、Swagger の利用を行っていきます。
 
-<a id="orgecae71d"></a>
+<a id="orgb412673"></a>
 
 ## ping - pong フローの確認
 
@@ -237,7 +237,7 @@ ping - pong API とは /ping へリクエストを投げると &ldquo;pong&rdquo
    :comment "<optional string>"}
   ```
 
-<a id="orgf57a730"></a>
+<a id="orge324fb7"></a>
 
 ## domain の作成
 
@@ -293,7 +293,7 @@ REPL で動作確認をしてみましょう。
 
 なお、動作確認、テストの段階で仕様に漏れがあれば、修正を施しましょう。
 
-<a id="org0819ade"></a>
+<a id="orgd6c82eb"></a>
 
 ## ルーティングを設定し、 Swagger を生やす
 
@@ -452,13 +452,13 @@ API でどのようなデータをやり取りするのかがわかったとこ�
     )))
 ```
 
-すべて記述するとともに、 **実装した関数を評価したら [4.2](#org54f1dd9)** 、 `(restart)` より環境を更新します。 なお、実装した関数を評価していないと、正しく動作しません。
+すべて記述するとともに、 **実装した関数を評価したら [4.2](#org0edb2b1)** 、 `(restart)` より環境を更新します。 なお、実装した関数を評価していないと、正しく動作しません。
 
 Swagger にアクセスして確かめてみましょう。ブラウザの `localhost:3000/api` より Swagger の画面にアクセスできます。
 
 ![img](./img/swagger.png)
 
-<a id="org1109dd4"></a>
+<a id="orga21219d"></a>
 
 ## swagger で API を試す
 
@@ -470,7 +470,7 @@ Swagger にアクセスして確かめてみましょう。ブラウザの `loca
 
 と返ってきます。これは期待通りですね。
 
-ping に &ldquo;hello&rdquo; を入力すると、以下のようなエラーが返ってきます。これは、controller ([3.4](#org0819ade)) で `s/conform` した際に、 domain の ping の仕様 (`:picture-gallery.domain/sample/ping`) に違反しているためです。
+ping に &ldquo;hello&rdquo; を入力すると、以下のようなエラーが返ってきます。これは、controller ([3.4](#orgd6c82eb)) で `s/conform` した際に、 domain の ping の仕様 (`:picture-gallery.domain/sample/ping`) に違反しているためです。
 
 ```json
 {
@@ -485,7 +485,7 @@ ping に &ldquo;hello&rdquo; を入力すると、以下のようなエラーが
 { "pong": "pong" }
 ```
 
-usecase ([3.4](#org0819ade)) を見ると、 comment を output モデルに追加していないことがわかるので、これを追加します。 つまり以下のように修正します。
+usecase ([3.4](#orgd6c82eb)) を見ると、 comment を output モデルに追加していないことがわかるので、これを追加します。 つまり以下のように修正します。
 
 ```clojure
 (defn ping-pong [input-model]
@@ -507,11 +507,11 @@ usecase ([3.4](#org0819ade)) を見ると、 comment を output モデルに追�
 
 期待する結果を得ることができました。
 
-<a id="org9a07caa"></a>
+<a id="orgd2f6ccb"></a>
 
 # 付録 & 捕捉
 
-<a id="org4b6d1cd"></a>
+<a id="org874fc5b"></a>
 
 ## logging 機能の設定
 
@@ -535,7 +535,7 @@ log の設定機能を追加します。 **timbre** というライブラリを�
  :picture-gallery.infrastructure.logger/logger {:env #ig/ref :picture-gallery.infrastructure.env/env}}
 ```
 
-<a id="org54f1dd9"></a>
+<a id="org0edb2b1"></a>
 
 ## コードの全評価
 

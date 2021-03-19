@@ -1,6 +1,5 @@
 (ns picture-gallery.utils.error
-  (:require [clojure.spec.alpha :as s]
-            [taoensso.timbre :as timbre]))
+  (:require [taoensso.timbre :as timbre]))
 
 (defn bind-error [f [val err]]
   (if (nil? err)
