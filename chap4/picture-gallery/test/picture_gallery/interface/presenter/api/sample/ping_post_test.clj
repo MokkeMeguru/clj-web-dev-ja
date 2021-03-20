@@ -1,5 +1,5 @@
-(ns picture-gallery.interface.presenter.api.ping-post-test
-  (:require [picture-gallery.interface.presenter.api.ping-post :as sut]
+(ns picture-gallery.interface.presenter.api.sample.ping-post-test
+  (:require [picture-gallery.interface.presenter.api.sample.ping-post :as sut]
             [clojure.test :as t]))
 
 (t/deftest ->http

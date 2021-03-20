@@ -1,4 +1,4 @@
-(ns picture-gallery.interface.presenter.api.ping-post
+(ns picture-gallery.interface.presenter.api.sample.ping-post
   (:require [clojure.spec.alpha :as s]
             [picture-gallery.domain.sample :as sample-domain]
             [picture-gallery.domain.openapi.sample :as sample-openapi]

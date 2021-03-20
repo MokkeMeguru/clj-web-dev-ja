@@ -7,13 +7,13 @@
 (defprotocol Auth
   (decode-id-token [this encrypted-id-token]))
 
-(defn auth-repository? [inst]
+(defn auth-service? [inst]
   (satisfies? Auth inst))
 
-(s/def ::auth-repository auth-repository?)
+(s/def ::auth-service auth-service?)
 
 (s/fdef decode-id-token
-  :args (s/cat :this ::auth-repository
+  :args (s/cat :this ::auth-service
                :encrypted-id-token ::auth-domain/encrypted-id-token)
   :ret ::auth-domain/decode-id-token-result)
 

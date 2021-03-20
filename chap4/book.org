@@ -14,7 +14,7 @@
 本稿では、Web API を作っていく上で頻出する認証・認可周りの話を、Firebase Auth を用いて片付けます。
 一般的に パスワード認証などが基礎のガイドでは紹介されますが、 refresh token を代表とする罠が多すぎるので、外部サービスを利用します。
 
-ただし、この手法は、(同等の機能を自前の認証サーバを用いることで実装することはできるとはいえ) Firebase への依存度が極めて高いため、 *技術的負債になる* 点に注意して下さい。
+ただし、この手法は、(同等の機能を自前の認証サーバを用いることで実装できるとはいえ) Firebase への依存度が極めて高いため、 *技術的負債になる* 点に注意して下さい。
 
 * Firebase Auth の準備
 1. Firebase Project よりプロジェクトを追加します。
@@ -195,13 +195,13 @@ client                                server
   今後作る機能と一貫性を持たせるために、認証情報 (~idToken~) はクエリやボディではなく、ヘッダに乗せます。
 
   #+BEGIN_SRC clojure
-  {:header {:bearer "<idToken>"}}
+  {:header "<idToken>"}
   #+END_SRC
 - 'signup-success
 
-  user-id はユーザに与えられる一意な数列です (e.g. ~019012323149~) 。(今回は 12 桁の数字列としましたがスケールなど考えると uuid などのほうが良いです。)
+  user-id はユーザに与えられる一意な数列です (e.g. ~019012323149~) 。(今回は 15 桁の数字列としましたがスケールなど考えると uuid などのほうが良いです。)
   #+BEGIN_SRC clojure
-  {:user-id "<uuid>"}
+  {:user-id "<userId>"}
   #+END_SRC
 ** サインイン
 #+begin_example
@@ -226,14 +226,14 @@ client                                server
     signin と同様です。
 
   #+BEGIN_SRC clojure
-  {:header {:bearer "<idToken>"}}
+  {:header "<idToken>"}
   #+END_SRC
 - 'signin-success
 
   signup と同様です。ただし、 signup の ~user-id~ は生成されるものですが、こちらは検索して得られるものです。
 
  #+BEGIN_SRC clojure
-  {:user-id "<uuid>"}
+  {:user-id "<userId>"}
   #+END_SRC
 
 ** サインアウト
@@ -246,8 +246,9 @@ client                                server
 ** domain
 ※ *domain は ORM ではない* ので、SQL のテーブルを意識して domain を作るのはおすすめできません。(ORM を意識すると domain が SQL に依存してしまう。とはいえ普通に設計して ORM っぽくなったりすることもあります。)
 
-今回問題になるのは、 firebase auth の ~id-token~ です。firebase auth の id-token (~encrypted-id-token~) は 外部ライブラリによって復号され、一意のユーザトークン (~id-token~) になります。
+今回問題になるのは、 firebase auth の ~id-token~ です。firebase auth の 仮フロントエンドから渡される id-token (~encrypted-id-token~) は、サーバ内で外部ライブラリによって復号され一意のユーザトークン (~id-token~) になります。
 
+またユーザID は衝突確率などを考慮して [[ランダムな数列と衝突確率]] 、 15桁の数字列としました。
 
 - firebase auth の domain
     #+BEGIN_SRC clojure
@@ -289,10 +290,10 @@ client                                server
   (:require [clojure.spec.alpha :as s]))
 
 (defn user-id? [num-str]
-  (re-matches #"^[0-9]{12}" num-str))
+  (re-matches #"^[0-9]{15}" num-str))
 
 (defn gen-user-id []
-  (apply str (take 12 (repeatedly #(rand-int 10)))))
+  (apply str (take 15 (repeatedly #(rand-int 10)))))
 
 (s/def ::user-id (s/and string? user-id?))
 (s/def ::id-token string?)
@@ -331,11 +332,11 @@ controller、 usecase、 presenter など詳細な実装は、この後実装す
 (defn signin-post-handler [input-data]
   (println (-> input-data :headers w/keywordize-keys :authorization))
   {:status 201
-   :body {:user-id "123123123123"}})
+   :body {:user-id "123123123123123"}})
 
 (defn signup-post-handler [input-data]
   {:status 201
-   :body {:user-id "123123123123"}})
+   :body {:user-id "123123123123123"}})
 
 (defn auth-router []
   ["/auth"
@@ -627,11 +628,11 @@ DB との接続ができたところで、次に DB マイグレーションの�
 *** マイグレーションファイルを書く
 まずマイグレーションファイルを書きます。ragtime のマイグレーションはマイグレート用の up.sql と、ロールバック用の down.sql を書く必要があります。
 
-- 001_users.up.sql
+- 001\under{}users.up.sql
     #+BEGIN_SRC sql
 -- 001_users.up.sql
 CREATE TABLE users (
-       id varchar(12) PRIMARY KEY,
+       id varchar(15) PRIMARY KEY,
        auth_token varchar(64) NOT NULL,
        created_at TIMESTAMP default CURRENT_TIMESTAMP,
        updated_at TIMESTAMP,
@@ -639,7 +640,7 @@ CREATE TABLE users (
 );
     #+END_SRC
 
-- 001_users.down.sql
+- 001\under{}users.down.sql
  
     #+BEGIN_SRC sql
 -- 001_users.down.sql
@@ -736,7 +737,7 @@ DROP TABLE users;
      :firebase-credentials (GoogleCredentials/getApplicationDefault)}))
 #+END_SRC
 
-</summary>
+</details>
 *** CLI スクリプトを書く
 動作確認のため、先に CLI スクリプトから仕上げます。
 clojure.tools.cli (https://github.com/clojure/tools.cli) を利用して、 CLI のオプション処理を実装します。
@@ -807,13 +808,12 @@ config を書きます。
 #+BEGIN_SRC shell
 #!/usr/bin/env bash
 # scripts/migration.sh
-set -euo pipefail
 
 # $* でシェルスクリプトに与えられた引数を受け渡す
 lein run -m picture-gallery.cmd.migration.core $*
 #+END_SRC
 
-実行してみます。 Applying 001_users、Rolling back 001_users と、マイグレートとロールバックが行われていることが確認できます。
+実行してみます。 Applying 001\under{}users、Rolling back 001\under{}users と、マイグレートとロールバックが行われていることが確認できます。
 
 #+begin_example
 # ./sample.sh -h
@@ -920,7 +920,7 @@ pic_gallery=# \d
                                  テーブル"public.users"
      列     |           タイプ            | 照合順序 | Null 値を許容 |    デフォルト
 ------------+-----------------------------+----------+---------------+-------------------
- id         | character varying(12)       |          | not null      |
+ id         | character varying(15)       |          | not null      |
  auth_token | character varying(64)       |          | not null      |
  created_at | timestamp without time zone |          |               | CURRENT_TIMESTAMP
  updated_at | timestamp without time zone |          |               |
@@ -930,7 +930,7 @@ pic_gallery=# \d
 #+end_example
 
 * interface の実装
-Firebase Auth の token のデコード、SQL の実行部分は interface にあたるので、実装していきます。
+Firebase Auth の token のデコード、SQL の実行部分は interface にあたるので、当該位置に実装していきます。
 この部分は、usecase との依存関係の方向上、インターフェースを介して (名前の通りですね) やり取りをする必要があるので、 Clojure におけるインターフェースの記述方法一つ、 ~defprotocol~ を利用して実装します。
 
 ** Firebase Auth の token デコード機構
@@ -1038,7 +1038,7 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
  
 ** SQL の実行機構
 使うライブラリは、 next.jdbc (https://github.com/seancorfield/next-jdbc) です。
-next.jdbc は非常に低レベルから JDBC (Java の DB 操作を行うためのライブラリ) を使うことができるライブラリで、チュートリアルがしっかりしているライブラリです。
+next.jdbc は非常に低いレベルから JDBC (Java の DB 操作を行うためのライブラリ) を使うことができるライブラリで、チュートリアルがしっかりしているライブラリです。
 
 本章では先程マイグレートした user テーブルとのやり取りを書いていきます。
 
@@ -1084,6 +1084,7 @@ next.jdbc は非常に低レベルから JDBC (Java の DB 操作を行うため
   :ret (s/and int? (partial <= 0)))
 #+END_SRC
 
+<details><summary>Users impl の実装</summary>
 #+BEGIN_SRC clojure
 ;; ここは詳細なので説明を省略します。基本的には next.jdbc のガイドを利用した utils を利用しています。
 (ns picture-gallery.interface.gateway.database.sql.users-repository
@@ -1128,47 +1129,487 @@ next.jdbc は非常に低レベルから JDBC (Java の DB 操作を行うため
       (sql-utils/physical-delete! spec :users {:id user-id}))))
 #+END_SRC
 
+</details>
 
 実行例としてはこんな形になります。
 #+BEGIN_SRC clojure
 (def system (ig/init {:picture-gallery.infrastructure.env/env {}
                       :picture-gallery.infrastructure.sql.sql/sql {:env (ig/ref :picture-gallery.infrastructure.env/env)}}))
-
-
 (def sample-user {:user-id "000000000000" :id-token "sample-token"})
+
 (create-user (:picture-gallery.infrastructure.sql.sql/sql system) sample-user)
 ;; => {:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}
+
 (get-users (:picture-gallery.infrastructure.sql.sql/sql system))
 ;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
 (get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000")
 ;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
 (get-exist-user-by-auth-token (:picture-gallery.infrastructure.sql.sql/sql system) "sample-token")
 ;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
+
 (delete-user (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000" true)
 ;; => 1
 (get-exist-user-by-auth-token (:picture-gallery.infrastructure.sql.sql/sql system) "sample-token")
 ;; => nil (論理削除したので nil)
 (get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000")
 ;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
+
 (delete-user (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000" false)
 ;; => 1 (こっちは物理削除)
 (get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000")
 ;; => nil (物理削除したので nil)
+
 (ig/halt! system) ;; (不要なコネクションプールは閉じて下さい)
 #+END_SRC
 * interface の組み込み
-体感一万年と二千年かかった下準備がようやくおわったので、ハンドラを usecase や interface と組み合わせて利用して組み立てていきます。
+(体感)一万年と二千年かかった下準備がようやくおわったので、残りの八千年かけてハンドラを usecase や interface と組み合わせて組み立てていきます。
+
+** サインアップ
+サインアップの流れは次のとおりです。
+
+1. http からデータを持ってくる (controller)
+2. ユーザを登録する (usecase)
+   1. encrypted-id-token を decode  する (gateway)
+   2. id-token から 既存のアカウントがあるか確認する (gateway)
+   3. 新しい (重複のない) ユーザ IDを発行する
+      1. ランダムなユーザ ID を発行する
+      2. ユーザ ID が重複しているか調べる (gateway)
+      3. ¬ 規定回数 ^ ユーザ ID が重複していれば 1. へ戻る
+      4. 規定回数を超えたらエラーハンドリング
+   4. ユーザをデータベースに登録する (gateway)
+3. 登録したユーザデータを http の response に整形する (presenter)
 
 
+** サインイン
+サインインの流れは次のとおりです。
+
+1. http からデータを持ってくる (controller)
+2. ユーザの確認をする
+   1. encrypted-id-token を decode する (gateway)
+   2. id-token から、既存のアカウントがあるか確認する (geteway)
+   3. ユーザ情報を取得する
+3. ユーザ情報を http の response に整形する (presenter)
+
+
+** 実装
+*** サインアップ
+<details><summary>controller</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.interface.controller.api.signup-post
+  (:require [clojure.spec.alpha :as s]
+            [clojure.walk :as w]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(defn http-> "
+  http request -> usecase input model
+  "
+  [input-data]
+  (let [{:keys [headers]} input-data
+        {:keys [authorization]} (w/keywordize-keys headers)
+        input-model {:encrypted-id-token authorization}
+        conformed-input-model (s/conform
+                               ::auth-domain/signup-input
+                               input-model)]
+    (if (not= ::s/invalid conformed-input-model)
+      [conformed-input-model nil]
+      [nil (error-domain/input-data-is-invalid (s/explain-str ::auth-domain/signup-input input-model))])))
+#+END_SRC
+
+</details>
+
+<details><summary>presenter</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.interface.presenter.api.signup-post
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.openapi.auth :as auth-openapi]
+            [picture-gallery.domain.openapi.base :as base-openapi]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(s/def ::body ::auth-openapi/signup-response)
+(s/def ::http-output-data (s/keys :req-un [::base-openapi/status ::body]))
+(s/fdef ->http
+  :args (s/cat :args
+               (s/or :success (s/tuple ::auth-domain/signup-output nil?)
+                     :failure (s/tuple nil? ::error-domain/error)))
+  :ret (s/or :success ::http-output-date
+             :failure ::error-domain/error))
+
+(defn ->http "
+  usecase output model -> http response
+  "
+  [[output-data error]]
+  (if (nil? error)
+    {:status 201
+     :body output-data}
+    error))
+#+END_SRC
+
+</details>
+
+<details><summary>usecase</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.usecase.signup
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.utils.error :refer [err->> border-error]]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]
+            [picture-gallery.interface.gateway.database.users-repository :as users-repository]
+            [picture-gallery.interface.gateway.auth.auth-service :as auth-service]
+            [picture-gallery.domain.users :as users-domain]))
+
+(s/fdef signup
+  :args (s/cat :input-model ::auth-domain/signup-input
+               :db ::users-repository/users-repository
+               :auth ::auth-service/auth-service)
+  :ret (s/or :success (s/tuple ::auth-domain/signin-output nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(defn decode-id-token "
+  decode encrypted id-token
+  "
+  [{:keys [input-model auth] :as m}]
+  (let [[[status body] err] (border-error {:function #(auth-service/decode-id-token auth (:encrypted-id-token input-model))
+                                           :error-wrapper error-domain/auth-error})]
+    (cond
+      err [nil err]
+      (= :failure status) [nil body]
+      :else [(assoc m :id-token (:id-token body)) nil])))
+
+(defn validate-duplicate-account "
+  validate duplicate account
+  by checking the active (not logical deleted) user which has the id-token
+  "
+  [{:keys [id-token db] :as m}]
+  (let [[active-user err] (border-error {:function #(users-repository/get-exist-user-by-auth-token db id-token)
+                                         :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      active-user [nil error-domain/duplicate-account-exist]
+      :else [m nil])))
+
+(defn give-new-user-id "
+  generate new unique user-id.
+  if it fails over 10 times, raise error
+  "
+  [{:keys [db] :as m}]
+  (loop [try-time 1
+         suggested-new-user-id (users-domain/gen-user-id)]
+    (let [[exist-user err] (border-error  {:function #(users-repository/get-user-by-user-id db suggested-new-user-id)
+                                           :error-wrapper error-domain/database-error})]
+      (cond
+        err [nil err]
+        (empty? exist-user) [(assoc m :new-user-id suggested-new-user-id) nil]
+        (> try-time 10) [nil error-domain/user-generation-error-by-user-id-allocation]
+        :else (recur (inc try-time)
+                     (users-domain/gen-user-id))))))
+
+(defn create-new-user "
+  create new user
+  "
+  [{:keys [id-token new-user-id db] :as m}]
+  (let [new-user {:user-id new-user-id
+                  :id-token id-token}
+        [saved-new-user err] (border-error {:function #(users-repository/create-user db new-user)
+                                            :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      :else [(assoc m :saved-new-user saved-new-user) nil])))
+
+(defn ->output-model "
+  format as output model
+  "
+  [{:keys [saved-new-user]}]
+  [{:user-id (:user-id saved-new-user)} nil])
+
+(defn signup [db auth input-model]
+  (err->>
+   {:input-model input-model
+    :db db
+    :auth auth}
+   decode-id-token  ;; id-token をデコードする
+   validate-duplicate-account ;; アカウントの重複がないかチャックする
+   give-new-user-id ;; 新規のユーザID を発行する
+   create-new-user ;; 新しいユーザを作成する
+   ->output-model ;; 出力モデルに整形する
+   ))
+#+END_SRC
+
+</details>
+
+*** サインイン
+
+<details><summary>controller</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.interface.controller.api.signin-post
+  (:require [clojure.spec.alpha :as s]
+            [clojure.walk :as w]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(defn http-> "
+  http request -> usecase input model
+  "
+  [input-data]
+  (let [{:keys [headers]} input-data
+        {:keys [authorization]} (w/keywordize-keys headers)
+        input-model {:encrypted-id-token authorization}
+        conformed-input-model (s/conform
+                               ::auth-domain/signin-input
+                               input-model)]
+    (if (not= ::s/invalid conformed-input-model)
+      [conformed-input-model nil]
+      [nil (error-domain/input-data-is-invalid (s/explain-str ::auth-domain/signin-input input-model))])))
+#+END_SRC
+
+</details>
+
+<details><summary>presenter</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.interface.presenter.api.signin-post
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.openapi.auth :as auth-openapi]
+            [picture-gallery.domain.openapi.base :as base-openapi]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(s/def ::body ::auth-openapi/signin-response)
+(s/def ::http-output-data (s/keys :req-un [::base-openapi/status ::body]))
+(s/fdef ->http
+  :args (s/cat :args
+               (s/or :success (s/tuple ::auth-domain/signin-output nil?)
+                     :failure (s/tuple nil? ::error-domain/error)))
+  :ret (s/or :success ::http-output-date
+             :failure ::error-domain/error))
+
+(defn ->http "
+  usecase output model -> http response
+  "
+  [[output-data error]]
+  (if (nil? error)
+    {:status 201
+     :body output-data}
+    error))
+#+END_SRC
+
+</details>
+
+<details><summary>usecase</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.usecase.signin
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.utils.error :refer [err->> border-error]]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]
+            [picture-gallery.interface.gateway.auth.auth-service :as auth-service]
+            [picture-gallery.interface.gateway.database.users-repository :as users-repository]))
+
+(s/fdef signin
+  :args (s/cat :input-model ::auth-domain/signin-input)
+  :ret (s/or :success (s/cat :signin-output ::auth-domain/signin-output :error nil)
+             :failure (s/cat :signin-output nil? :error ::error-domain/error)))
+
+(defn decode-id-token "
+  decode encrypted id-token
+  "
+  [{:keys [input-model auth] :as m}]
+  (let [[[status body] err] (border-error {:function #(auth-service/decode-id-token auth (:encrypted-id-token input-model))
+                                           :error-wrapper error-domain/auth-error})]
+    (cond
+      err [nil err]
+      (= :failure status) [nil body]
+      :else [(assoc m :id-token (:id-token body)) nil])))
+
+(defn get-exist-user-has-id-token "
+  get active (not logical deleted) user
+  which has id-token"
+  [{:keys [id-token db] :as m}]
+  (let [[active-user err] (border-error {:function #(users-repository/get-exist-user-by-auth-token db id-token)
+                                         :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      (empty? active-user) [nil error-domain/signin-failed-by-user-not-found]
+      :else [(assoc m :exist-user active-user) nil])))
+
+(defn ->output-model "
+  format as output model
+  "
+  [{:keys [exist-user]}]
+  [{:user-id (:user-id exist-user)} nil])
+
+(defn signin [db auth input-model]
+  (err->>
+   {:input-model input-model
+    :db db
+    :auth auth}
+   decode-id-token
+   get-exist-user-has-id-token
+   ->output-model))
+#+END_SRC
+
+</details>
+
+*** ハンドラの修正
+db や auth の infrastructure と連携する必要があるため、 config と ハンドラを修正します。
+
+#+BEGIN_SRC clojure
+{:picture-gallery.infrastructure.env/env {}
+ :picture-gallery.infrastructure.logger/logger {:env #ig/ref :picture-gallery.infrastructure.env/env}
+ :picture-gallery.infrastructure.firebase.core/firebase {:env #ig/ref :picture-gallery.infrastructure.env/env}
+ :picture-gallery.infrastructure.sql.sql/sql {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                              :logger #ig/ref :picture-gallery.infrastructure.logger/logger}
+ :picture-gallery.infrastructure.sql.migrate/migration  {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                         :operation :migrate
+                                                         :logger #ig/ref :picture-gallery.infrastructure.logger/logger}
+ :picture-gallery.infrastructure.router.core/router {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                     :auth #ig/ref :picture-gallery.infrastructure.firebase.core/firebase
+                                                     :db #ig/ref :picture-gallery.infrastructure.sql.sql/sql}
+ :picture-gallery.infrastructure.server/server {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                :router #ig/ref :picture-gallery.infrastructure.router.core/router
+                                                :port 3000}}
+#+END_SRC
+
+ハンドラ
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.infrastructure.router.core)
+
+(defn app [db auth]
+  (ring/ring-handler
+   (ring/router
+    [["/swagger.json"
+      {:get {:no-doc true
+             :swagger {:info {:title "picture-gallery-api"}
+                       :securityDefinitions
+                       {:Bearer
+                        {:type "apiKey"
+                         :in "header"
+                         :name "Authorization"}}
+                       :basePath "/"}
+
+             :handler (swagger/create-swagger-handler)}}]
+     ["/api"
+      (sample-router/sample-router)
+      (auth-router/auth-router db auth)]]
+
+    {:exception pretty/exception
+     :data {:coercion reitit.coercion.spec/coercion
+            :muuntaja m/instance
+            :middleware
+            [;; swagger feature
+             swagger/swagger-feature
+             ;; query-params & form-params
+             parameters/parameters-middleware
+             ;; content-negotiation
+             muuntaja/format-negotiate-middleware
+             ;; encoding response body
+             muuntaja/format-response-middleware
+             ;; exception handling
+             exception/exception-middleware
+             ;; decoding request body
+             muuntaja/format-request-middleware
+             ;; coercing response bodys
+             coercion/coerce-response-middleware
+             ;; coercing request parameters
+             coercion/coerce-request-middleware
+             ;; multipart
+             multipart/multipart-middleware]}})
+
+   (ring/routes
+    (swagger-ui/create-swagger-ui-handler {:path "/api"})
+    (ring/create-default-handler))
+   {:middleware [wrap-with-logger]}))
+
+(defmethod ig/init-key ::router [_ {:keys [env db auth]}]
+  (timbre/info "router got: env" env)
+  (timbre/info "router got: db" db)
+  (timbre/info "router got: auth" auth)
+  (app db auth))
+#+END_SRC
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.infrastructure.router.auth
+  (:require
+   [picture-gallery.usecase.signin :as signin-usecase]
+   [picture-gallery.usecase.signup :as signup-usecase]
+   [picture-gallery.interface.controller.api.signin-post :as signin-post-controller]
+   [picture-gallery.interface.controller.api.signup-post :as signup-post-controller]
+   [picture-gallery.interface.presenter.api.signin-post :as signin-post-presenter]
+   [picture-gallery.interface.presenter.api.signup-post :as signup-post-presenter]
+   [picture-gallery.domain.openapi.auth :as auth-openapi]
+   [picture-gallery.utils.error :refer [err->>]]))
+
+;; handlers
+(defn signin-post-handler [db auth input-data]
+  (signin-post-presenter/->http
+   (err->> input-data
+           signin-post-controller/http->
+           (partial signin-usecase/signin db auth))))
+
+(defn signup-post-handler [db auth input-data]
+  (signup-post-presenter/->http
+   (err->> input-data
+           signup-post-controller/http->
+           (partial signup-usecase/signup db auth))))
+
+;; router
+(defn auth-router [db auth]
+  ["/auth"
+   ["/signin"
+    {:swagger {:tags ["auth"]}
+     :post {:summary "signin with firebase-auth token"
+            :swagger {:security [{:Bearer []}]}
+            :responses {201 {:body ::auth-openapi/signin-response}}
+            :handler (partial signin-post-handler db auth)}}]
+   ["/signup"
+    {:swagger {:tags ["auth"]}
+     :post {:summary "signup with firebase-auth token"
+            :swagger {:security [{:Bearer []}]}
+            :responses {201 {:body ::auth-openapi/signup-response}}
+            :handler (partial signup-post-handler db auth)}}]])
+#+END_SRC
 * 動作確認
+ここまでできたところで、実際に仮フロントエンドと swagger を経由して動作を確かめてみます。
 
+signin の例):
+[[./img/auth-sample.png]]
 * 付録・捕捉
 ** 実装してみます
 期待する機能が実装可能かどうかを REPL を動かしながら試す。
 実装可能であれば仕様を固めてテストを書いたり実装を進めたりして、実装できなそうであれば、仕様を見直す。
 
 特に実装が不透明なライブラリを使うときには、先にきっとこんなはずなテストを書いてから実装するよりも、こちらのほうが失敗が少ないので (n=1 orz)、Clojure や Python など使う際には、ぜひREPLやインタプリタを活用してみて下さい。
-**
+
+** ランダムな数列と衝突確率
+ユーザ n 人を想定し、ランダム(要アルゴリズム)な k 桁の数列を id にしたときに衝突しない確率を考えてみます。
+
+#+BEGIN_SRC math
+\begin{align}
+&1 (1 - \frac{1}{10^k}) (1 - \frac{2}{10^k}) \cdots  (1 - \frac{n-1}{10^k})
+&= \Pi^{n-1}_{i=1}(1-\frac{i}{10^k})
+\end{align}
+#+END_SRC
+
+衝突する確率は次の通り (ただし i / 10^k << n )
+
+#+BEGIN_SRC math
+\begin{align}
+&1 - \Pi^{n-1}_{i=1}(1-\frac{i}{10^k})
+&\approx 1- \Pi^{n-1}_{i=1}exp(- \frac{i}{10^k}) &\because e^x \approx 1 + x\ where \ x << n
+&= 1 - exp (- \frac{n(n-1)}{2} \frac{1}{10^k}) &\because \Sigma^{n-1}{i-1}i=\frac{n(n-1)}{2}
+&\approx 1 - exp (- \frac{n^2}{2 \cdot 10^k})
+\end{align}
+#+END_SRC
+
+仮に15桁でユーザ登録総数100万人未満のサービス開発をすると仮定すると、衝突する確率は ~1 - exp(- (10^12)/(2 x 10^15)) = 1 - exp (- 1 / 2000) = 0.0005~ なので、 1% 未満に落とせます。
+とはいえ猿もキーボードを叩けばハムレットを書くので、最低でもリトライ＋上限試行回数を設ける必要があります。 (たとえ UUID であれ、 *衝突は起こります* )
 ** テスト用データベースのセットアップ
 テスト用のデータベースをセットアップします。
 

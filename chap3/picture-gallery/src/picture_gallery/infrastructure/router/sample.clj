@@ -2,7 +2,7 @@
   (:require [picture-gallery.domain.openapi.sample :as sample-openapi]
             [picture-gallery.interface.controller.api.sample.ping-post :as ping-post-controller]
             [picture-gallery.usecase.sample.ping-pong :as ping-pong-usecase]
-            [picture-gallery.interface.presenter.api.ping-post :as ping-post-presenter]
+            [picture-gallery.interface.presenter.api.sample.ping-post :as ping-post-presenter]
             [picture-gallery.utils.error :refer [err->>]]))
 
 ;; handlers

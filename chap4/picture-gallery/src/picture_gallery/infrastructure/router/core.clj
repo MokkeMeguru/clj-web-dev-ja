@@ -27,7 +27,7 @@
    [picture-gallery.infrastructure.router.sample :as sample-router]
    [picture-gallery.infrastructure.router.auth :as auth-router]))
 
-(defn app []
+(defn app [db auth]
   (ring/ring-handler
    (ring/router
     [["/swagger.json"
@@ -43,7 +43,7 @@
              :handler (swagger/create-swagger-handler)}}]
      ["/api"
       (sample-router/sample-router)
-      (auth-router/auth-router)]]
+      (auth-router/auth-router db auth)]]
 
     {:exception pretty/exception
      :data {:coercion reitit.coercion.spec/coercion
@@ -73,6 +73,8 @@
     (ring/create-default-handler))
    {:middleware [wrap-with-logger]}))
 
-(defmethod ig/init-key ::router [_ {:keys [env]}]
+(defmethod ig/init-key ::router [_ {:keys [env db auth]}]
   (timbre/info "router got: env" env)
-  (app))
+  (timbre/info "router got: db" db)
+  (timbre/info "router got: auth" auth)
+  (app db auth))

@@ -1,35 +1,42 @@
-- [Firebase Auth の準備](#org1238cdc)
-- [仮フロントエンドの作成](#org863cc72)
-- [サインアップ・サインイン・サインアウトフローの確認](#org2326190)
-  - [サインアップ](#orgf80eb4d)
-  - [サインイン](#org11fd8d6)
-  - [サインアウト](#org8e9ee5b)
-- [ドメイン・ハンドラの作成](#orgcbded59)
-  - [domain](#org7d40eba)
-  - [ルータ & ハンドラ](#org977ae51)
-- [infrastructure の実装](#org8821c3c)
-  - [Firebase Auth の token 読み込み](#org1e60ea0)
-  - [DB の接続](#orgd77ed35)
-  - [マイグレーション](#orgac32f93)
-    - [実装方針](#org006244c)
-    - [マイグレーションファイルを書く](#orgf2a2b2f)
-    - [integrant のコードを書く](#org27b4481)
-    - [CLI スクリプトを書く](#org76c2680)
-    - [サーバ用コードに埋め込む](#orga5e777a)
-- [interface の実装](#orgf5bb353)
-  - [Firebase Auth の token デコード機構](#org66d8fac)
-  - [SQL の実行機構](#orgea8d8f9)
-    - [PostgreSQL との接続](#orge86d440)
-- [interface の組み込み](#orga53a509)
-- [動作確認](#org526fd55)
-- [捕捉](#orgce21e80)
-  - [実装してみます](#org860b3cb)
+- [Firebase Auth の準備](#org298c1ff)
+- [仮フロントエンドの作成](#orgf2641c5)
+- [サインアップ・サインイン・サインアウトフローの確認](#org8d7af9f)
+  - [サインアップ](#org2ec28ea)
+  - [サインイン](#org0aad4a4)
+  - [サインアウト](#orgee4c7b6)
+- [ドメイン・ハンドラの作成](#orgd4478e4)
+  - [domain](#org87035a2)
+  - [ルータ & ハンドラ](#org2c65609)
+- [infrastructure の実装](#org375840b)
+  - [Firebase Auth の token 読み込み](#org7b5785d)
+  - [DB の接続](#orgd8bd39b)
+  - [マイグレーション](#orgafe0f90)
+    - [実装方針](#org4305bab)
+    - [マイグレーションファイルを書く](#orgd07814d)
+    - [integrant のコードを書く](#org48cf32e)
+    - [CLI スクリプトを書く](#org86ebe3a)
+    - [サーバ用コードに埋め込む](#orgf473b37)
+- [interface の実装](#org65537ca)
+  - [Firebase Auth の token デコード機構](#orga0db6ec)
+  - [SQL の実行機構](#org95986f7)
+- [interface の組み込み](#orgad0522a)
+  - [サインアップ](#org7bfc030)
+  - [サインイン](#orgfaff47e)
+  - [実装](#orgc9fbbc4)
+    - [サインアップ](#org0f84422)
+    - [サインイン](#orge9cd8dc)
+    - [ハンドラの修正](#org4670042)
+- [動作確認](#orgd4f75bb)
+- [付録・捕捉](#org07a9471)
+  - [実装してみます](#orga6c9efe)
+  - [ランダムな数列と衝突確率](#org63ece35)
+  - [テスト用データベースのセットアップ](#org2e3067b)
 
 本稿では、Web API を作っていく上で頻出する認証・認可周りの話を、Firebase Auth を用いて片付けます。 一般的に パスワード認証などが基礎のガイドでは紹介されますが、 refresh token を代表とする罠が多すぎるので、外部サービスを利用します。
 
-ただし、この手法は、(同等の機能を自前の認証サーバを用いることで実装することはできるとはいえ) Firebase への依存度が極めて高いため、 **技術的負債になる** 点に注意して下さい。
+ただし、この手法は、(同等の機能を自前の認証サーバを用いることで実装できるとはいえ) Firebase への依存度が極めて高いため、 **技術的負債になる** 点に注意して下さい。
 
-<a id="org1238cdc"></a>
+<a id="org298c1ff"></a>
 
 # Firebase Auth の準備
 
@@ -64,13 +71,13 @@
 - <https://firebase.google.com/docs/auth/web/google-signin?authuser=1#before_you_begin>
 - <https://firebase.google.com/docs/admin/setup?hl=ja#initialize-sdk>
 
-<a id="org863cc72"></a>
+<a id="orgf2641c5"></a>
 
 # 仮フロントエンドの作成
 
-Firebase Auth はフロントエンドと Firebase の Auth サーバとの通信を繋げて認証情報を獲得します。 そのため、フロントエンドの実装が必須となります。
+Firebase Auth はフロントエンドと Firebase の認証サーバとの通信を繋げて認証情報を獲得します。 そのため、 **フロントエンドの実装が必須** となります。
 
-今回はまず、認証情報を自前の DB に API サーバを通してに持ち込んでいく流れを実装していくので、仮のフロントエンドを作成します。
+今回はまず、認証情報を自前の DB に API サーバを通してに持ち込む流れを実装していくので、仮のフロントエンドを作成します。
 
 仮フロントエンドは、http-server (<https://github.com/http-party/http-server>) と １枚の `index.html` を用いて作成します。 まずは仮フロントエンドのプロジェクト作成をします。
 
@@ -188,13 +195,13 @@ npm install -D http-server
 
 なお、この **認証情報は有効期限がある** ため、 API をテストする際には最新のものを利用する必要があります。
 
-<a id="org2326190"></a>
+<a id="org8d7af9f"></a>
 
 # サインアップ・サインイン・サインアウトフローの確認
 
 実装をする前に、今回作る機能の利用フローを考えます。
 
-<a id="orgf80eb4d"></a>
+<a id="org2ec28ea"></a>
 
 ## サインアップ
 
@@ -218,18 +225,18 @@ npm install -D http-server
   今後作る機能と一貫性を持たせるために、認証情報 (`idToken`) はクエリやボディではなく、ヘッダに乗せます。
 
   ```clojure
-    {:header {:bearer "<idToken>"}}
+    {:header "<idToken>"}
   ```
 
 - &rsquo;signup-success
 
-  user-id はユーザに与えられる一意な数列です (e.g. `019012323149`) 。(今回は 12 桁の数字列としましたがスケールなど考えると uuid などのほうが良いです。)
+  user-id はユーザに与えられる一意な数列です (e.g. `019012323149`) 。(今回は 15 桁の数字列としましたがスケールなど考えると uuid などのほうが良いです。)
 
   ```clojure
-    {:user-id "<uuid>"}
+    {:user-id "<userId>"}
   ```
 
-<a id="org11fd8d6"></a>
+<a id="org0aad4a4"></a>
 
 ## サインイン
 
@@ -253,86 +260,100 @@ npm install -D http-server
   signin と同様です。
 
   ```clojure
-    {:header {:bearer "<idToken>"}}
+    {:header "<idToken>"}
   ```
 
-- &rsquo;signup-success
+- &rsquo;signin-success
 
-  こちらも signup と同様ですが、 signup の `user-id` は生成されるものですが、こちらは検索して得られるものです。
+  signup と同様です。ただし、 signup の `user-id` は生成されるものですが、こちらは検索して得られるものです。
 
   ```clojure
-    {:user-id "<uuid>"}
+    {:user-id "<userId>"}
   ```
 
-<a id="org8e9ee5b"></a>
+<a id="orgee4c7b6"></a>
 
 ## サインアウト
 
 サインイン状態の管理は Firebase Auth 側が受け持っているので、こちらが行うことはありません。 (他アプリ開発をしている上で必要となるケースもあるかもしれませんが、今回は扱いません。)
 
-<a id="orgcbded59"></a>
+<a id="orgd4478e4"></a>
 
 # ドメイン・ハンドラの作成
 
 今回も見通しを良くするために usecase の詳細を省いた実装を先に行います。
 
-<a id="org7d40eba"></a>
+<a id="org87035a2"></a>
 
 ## domain
 
-※ **domain は ORM ではない** ので、SQL のテーブルを意識して domain を作るのはおすすめできません。(ORM を意識すると domain が SQL に依存してしまう)
+※ **domain は ORM ではない** ので、SQL のテーブルを意識して domain を作るのはおすすめできません。(ORM を意識すると domain が SQL に依存してしまう。とはいえ普通に設計して ORM っぽくなったりすることもあります。)
 
-今回問題になるのは、 firebase auth の `id-token` です。firebase auth の id-token は 外部ライブラリによって復号され、一意のユーザトークン (`decoded-id-token`) になります。
+今回問題になるのは、 firebase auth の `id-token` です。firebase auth の 仮フロントエンドから渡される id-token (`encrypted-id-token`) は、サーバ内で外部ライブラリによって復号され一意のユーザトークン (`id-token`) になります。
+
+またユーザ ID は衝突確率などを考慮して [9.2](#org63ece35) 、 15 桁の数字列としました。
 
 - firebase auth の domain
 
   ```clojure
-  (ns picture-gallery.domain.firebase
-    (:require [clojure.spec.alpha :as s]))
+  (ns picture-gallery.domain.auth
+    (:require [clojure.spec.alpha :as s]
+              [picture-gallery.domain.users :as users-domain]
+              [picture-gallery.domain.error :as error-domain]
+              [picture-gallery.domain.base :as base-domain]))
 
-  (s/def ::id-token string?)
-  (s/def ::decoded-id-token string?)
+  (s/def ::encrypted-id-token string?)
+
+  ;; ここは usecase の in-out にまつわるモデルの話
+  (s/def ::signin-input
+    (s/keys :req-un [::encrypted-id-token]))
+
+  (s/def ::signin-output
+    (s/keys :req-un [::users-domain/user-id]))
+
+  (s/def ::signup-input
+    (s/keys :req-un [::encrypted-id-token]))
+
+  (s/def ::signup-output
+    (s/keys :req-un [::users-domain/user-id]))
+
+  ;; ここは interface の encrypyed-id-token デコード周りの話
+  (s/def ::decode-id-token-succeed
+    (s/tuple ::base-domain/success ::users-domain/id-token))
+
+  (s/def ::decode-id-token-failed
+    (s/tuple ::base-domain/failure ::error-domain/error))
+
+  (s/def ::decode-id-token-result
+    (s/or :success ::decode-id-token-succeed
+          :failure ::decode-id-token-failed))
   ```
 
 - user の domain
 
   ```clojure
   (ns picture-gallery.domain.users
-    (:require [clojure.spec.alpha :as s]
-              [picture-gallery.domain.firebase :as firebase-domain]))
+    (:require [clojure.spec.alpha :as s]))
 
   (defn user-id? [num-str]
-    (re-matches #"^[0-9]{12}" num-str))
+    (re-matches #"^[0-9]{15}" num-str))
+
+  (defn gen-user-id []
+    (apply str (take 15 (repeatedly #(rand-int 10)))))
 
   (s/def ::user-id (s/and string? user-id?))
-  (s/def ::created_at pos-int?)
+  (s/def ::id-token string?)
+  (s/def ::created-at pos-int?)
 
+  ;; ユーザのモデル
   (s/def ::user-create-model
-    (s/keys :req-un [::user-id ::firebase-domain/decoded-id-token]))
+    (s/keys :req-un [::user-id ::id-token]))
 
   (s/def ::user-model
-    (s/keys :req-un [::user-id ::firebase-domain/decoded-id-token ::created_at]))
-  ```
+    (s/keys :req-un [::user-id ::id-token ::created-at]))
 
-- auth (signin/signup) の domain
-
-  ```clojure
-  (ns picture-gallery.domain.auth
-    (:require [clojure.spec.alpha :as s]
-              [picture-gallery.domain.users :as users-domain]
-              [picture-gallery.domain.firebase :as firebase-domain]))
-
-  (s/def ::signin-input
-    (s/keys :req-un [::firebase-domain/id-token]))
-
-  (s/def ::signin-output
-    (s/keys :req-un [::users-domain/user-id]))
-
-  (s/def ::signup-input
-    (s/keys :req-un [::firebase-domain/id-token]))
-
-  (s/def ::signup-output
-    (s/keys :req-un [::users-domain/user-id]))
+  (s/def ::users-model
+    (s/coll-of ::user-model))
   ```
 
 - swagger での auth (signin/signup) の domain
@@ -347,7 +368,7 @@ npm install -D http-server
   (s/def ::signup-response (s/keys :req-un [::user-id]))
   ```
 
-<a id="org977ae51"></a>
+<a id="org2c65609"></a>
 
 ## ルータ & ハンドラ
 
@@ -363,11 +384,11 @@ controller、 usecase、 presenter など詳細な実装は、この後実装す
 (defn signin-post-handler [input-data]
   (println (-> input-data :headers w/keywordize-keys :authorization))
   {:status 201
-   :body {:user-id "123123123123"}})
+   :body {:user-id "123123123123123"}})
 
 (defn signup-post-handler [input-data]
   {:status 201
-   :body {:user-id "123123123123"}})
+   :body {:user-id "123123123123123"}})
 
 (defn auth-router []
   ["/auth"
@@ -417,17 +438,17 @@ controller、 usecase、 presenter など詳細な実装は、この後実装す
 
 繰り返しますが、今回はこの apiKey に firebase auth の id-token を入力していくことになります。
 
-<a id="org8821c3c"></a>
+<a id="org375840b"></a>
 
 # infrastructure の実装
 
 Firebase や DB とやり取りをするためにそれぞれとの接続を作る必要があります。この部分は Clean Architecture 的には infrastructure にあたります。
 
-<a id="org1e60ea0"></a>
+<a id="org7b5785d"></a>
 
 ## Firebase Auth の token 読み込み
 
-[1](#org1238cdc) で用意した、 `resources/secrets/firebase_secrets.json` を読み込んで id-token をデコードするための準備を行います。 今回はライブラリのドキュメントを信用して説明を省略していますが、時間があれば API ドキュメントを読んだほうが良いです。
+[1](#org298c1ff) で用意した、 `resources/secrets/firebase_secrets.json` を読み込んで encrypted-id-token をデコードするための準備を行います。 今回はライブラリのドキュメントを信用して説明を省略していますが、時間があれば **API ドキュメントを読んだほうが良いです** (~~サンプルが古すぎるなど~~) 。
 
 ```clojure
 (ns picture-gallery.infrastructure.firebase.core
@@ -479,8 +500,6 @@ config を編集します。
 
 ```shell
 # env.sh
-set -euo pipefail
-
 echo "please run as \"source env.sh\""
 
 export GOOGLE_APPLICATION_CREDENTIALS="resources/secrets/firebase_secrets.json"
@@ -497,13 +516,13 @@ REPL を再起動し、 `(start)` してみましょう。ログに `picture-gal
     2021-03-16T15:52:05.347Z f04004b3a5e3 INFO [picture-gallery.infrastructure.firebase.core:16] - connectiong to firebase with  ServiceAccountCredentials{clientId=107926774701607421850, clientEmail=firebase-adminsdk-l42c5@sample-picture-gallery-c12rb.iam.gserviceaccount.com, privateKeyId=80f9a8cceb5036d0a96f73a108fa485aeed314a4, transportFactoryClassName=com.google.auth.oauth2.OAuth2Utils$DefaultHttpTransportFactory, tokenServerUri=https://oauth2.googleapis.com/token, scopes=[], serviceAccountUser=null, quotaProjectId=null}
     # ...
 
-<a id="orgd77ed35"></a>
+<a id="orgd8bd39b"></a>
 
 ## DB の接続
 
 次に DB の接続を行います。 今回は PostgreSQL を用います。 使うライブラリは hirari-cp (<https://github.com/tomekw/hikari-cp>) です。 hikari-cp は 高速に db のコネクションプールを作ることができるライブラリです。
 
-`docker-compose` より、 `port=5432` から PostgreSQL がコンニチハしていることがわかるので、環境変数のセットアップから先に行います。
+`docker-compose` より、 `dev_db` の `port=5432` から PostgreSQL がコンニチハしていることがわかるので、環境変数のセットアップから先に行います。
 
 `profiles.clj` を次のように編集します。 `database-<option-name>` がちょうど環境変数のセットアップに必要な設定です。
 
@@ -639,11 +658,11 @@ REPL を再起動し、 `(start)` してみましょう。ログに `picture-gal
 - <https://github.com/brettwooldridge/HikariCP> Java の HikariCP (hikari-cp の参照元)
 - <https://github.com/duct-framework/database.sql.hikaricp> hikari-cp への logging 実装
 
-<a id="orgac32f93"></a>
+<a id="orgafe0f90"></a>
 
 ## マイグレーション
 
-<a id="org006244c"></a>
+<a id="org4305bab"></a>
 
 ### 実装方針
 
@@ -654,36 +673,39 @@ DB との接続ができたところで、次に DB マイグレーションの�
 1.  マイグレート マイグレーションのファイルに基づいて DB を掘ります。
 2.  ロールバック マイグレーションしたものを i (> 1) 個だけ元に戻します。
 
-<a id="orgf2a2b2f"></a>
+<a id="orgd07814d"></a>
 
 ### マイグレーションファイルを書く
 
 まずマイグレーションファイルを書きます。ragtime のマイグレーションはマイグレート用の up.sql と、ロールバック用の down.sql を書く必要があります。
 
-- 001<sub>users.up.sql</sub>
+- 001_users.up.sql
 
-```sql
--- 001_users.up.sql
-CREATE TABLE users (
-       id varchar(12) PRIMARY KEY,
-       firebase_token varchar(64)
-);
-```
+  ```sql
+  -- 001_users.up.sql
+  CREATE TABLE users (
+         id varchar(15) PRIMARY KEY,
+         auth_token varchar(64) NOT NULL,
+         created_at TIMESTAMP default CURRENT_TIMESTAMP,
+         updated_at TIMESTAMP,
+         is_deleted BOOLEAN NOT NULL default FALSE
+  );
+  ```
 
-- 001<sub>users.down.sql</sub>
+- 001_users.down.sql
 
-```sql
--- 001_users.down.sql
-DROP TABLE users;
-```
+  ```sql
+  -- 001_users.down.sql
+  DROP TABLE users;
+  ```
 
-<a id="org27b4481"></a>
+<a id="org48cf32e"></a>
 
 ### integrant のコードを書く
 
-マイグレーションのコードそのものは ragtime のドキュメントを参考に実装します。
+マイグレーションのコードそのものは ragtime のドキュメントを参考にしつつ、integrant のシステムと組み合わせる形でまとめます。
 
-さらに、 `operation` キーでマイグレートするかロールバックするかを分岐させます。
+このコードではマイグレートとロールバックを分岐させるために、 `operation` キーを用いました。
 
 ```clojure
 (ns picture-gallery.infrastructure.sql.migrate
@@ -770,13 +792,13 @@ DROP TABLE users;
      :firebase-credentials (GoogleCredentials/getApplicationDefault)}))
 ```
 
-</summary>
+</details>
 
-<a id="org76c2680"></a>
+<a id="org86ebe3a"></a>
 
 ### CLI スクリプトを書く
 
-動作確認のため、先に CLI スクリプトから仕上げます。 clojure.tools.cli (<https://github.com/clojure/tools.cli>) を利用して CLI オプション処理を実装します。
+動作確認のため、先に CLI スクリプトから仕上げます。 clojure.tools.cli (<https://github.com/clojure/tools.cli>) を利用して、 CLI のオプション処理を実装します。
 
 ```clojure
 (ns picture-gallery.cmd.migration.core
@@ -844,13 +866,12 @@ config を書きます。
 ```shell
 #!/usr/bin/env bash
 # scripts/migration.sh
-set -euo pipefail
 
 # $* でシェルスクリプトに与えられた引数を受け渡す
 lein run -m picture-gallery.cmd.migration.core $*
 ```
 
-実行してみます。 Applying 001<sub>users</sub>、Rolling back 001<sub>users</sub> と、マイグレートとロールバックが行われていることが確認できます。
+実行してみます。 Applying 001_users、Rolling back 001_users と、マイグレートとロールバックが行われていることが確認できます。
 
     # ./sample.sh -h
     This is the migration program
@@ -867,7 +888,7 @@ lein run -m picture-gallery.cmd.migration.core $*
     database options {:adapter postgresql, :database-name pic_gallery, :username meguru, :password emacs, :server-name dev_db, :port-number 5432}
     orchestra instrument is active
     2021-03-18T14:37:38.388Z f04004b3a5e3 INFO [picture-gallery.infrastructure.sql.migrate:20] - run migration with operation :migrate (rollback-amount is  1 )
-    Applying 001_users
+    Applying 001_users # <--- !!!
     migration operation is succeed
     # ./sample.sh -o rollback
     loading environment via environ
@@ -877,10 +898,10 @@ lein run -m picture-gallery.cmd.migration.core $*
     database options {:adapter postgresql, :database-name pic_gallery, :username meguru, :password emacs, :server-name dev_db, :port-number 5432}
     orchestra instrument is active
     2021-03-18T14:38:09.085Z f04004b3a5e3 INFO [picture-gallery.infrastructure.sql.migrate:20] - run migration with operation :rollback (rollback-amount is  1 )
-    Rolling back 001_users
+    Rolling back 001_users # <--- !!!
     migration operation is succeed
 
-<a id="orga5e777a"></a>
+<a id="orgf473b37"></a>
 
 ### サーバ用コードに埋め込む
 
@@ -939,13 +960,38 @@ lein run -m picture-gallery.cmd.migration.core $*
 
 </details>
 
-<a id="orgf5bb353"></a>
+ホストから PostgreSQL に接続して、中身を見てみます。
+
+    $ psql -h localhost -p 5566 pic_gallery
+    psql (13.2、サーバ 10.5 (Debian 10.5-2.pgdg90+1))
+    "help"でヘルプを表示します。
+
+    pic_gallery=# \d
+                     リレーション一覧
+     スキーマ |        名前        |  タイプ  | 所有者
+    ----------+--------------------+----------+--------
+     public   | ragtime_migrations | テーブル | meguru
+     public   | users              | テーブル | meguru
+    (2 行)
+
+                                     テーブル"public.users"
+         列     |           タイプ            | 照合順序 | Null 値を許容 |    デフォルト
+    ------------+-----------------------------+----------+---------------+-------------------
+     id         | character varying(15)       |          | not null      |
+     auth_token | character varying(64)       |          | not null      |
+     created_at | timestamp without time zone |          |               | CURRENT_TIMESTAMP
+     updated_at | timestamp without time zone |          |               |
+     is_deleted | boolean                     |          | not null      | false
+    インデックス:
+        "users_pkey" PRIMARY KEY, btree (id)
+
+<a id="org65537ca"></a>
 
 # interface の実装
 
-Firebase Auth の token のデコード、SQL の実行部分は interface にあたるので、実装していきます。 この部分は、usecase との依存関係の方向上、インターフェースを介して (名前の通りですね) やり取りをする必要があるので、 Clojure におけるインターフェースの記述方法一つ、 `defprotocol` を利用して実装します。
+Firebase Auth の token のデコード、SQL の実行部分は interface にあたるので、当該位置に実装していきます。 この部分は、usecase との依存関係の方向上、インターフェースを介して (名前の通りですね) やり取りをする必要があるので、 Clojure におけるインターフェースの記述方法一つ、 `defprotocol` を利用して実装します。
 
-<a id="org66d8fac"></a>
+<a id="orga0db6ec"></a>
 
 ## Firebase Auth の token デコード機構
 
@@ -959,31 +1005,41 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
   - 期限切れのトークン &ldquo;Firebase xxx has expired &#x2026; &rdquo; というエラーが発生したとき
   - 不明なエラー (それ以外のエラー) それ以外
 
-仕様が見えてきたところで実装してみます ([9.1](#org860b3cb))。
+仕様が見えてきたところで実装してみます ([9.1](#orga6c9efe))。
 
 ```clojure
-(ns picture-gallery.interface.gateway.auth.core
-  (:require [picture-gallery.interface.gateway.auth.firebase :as firebase-impl]
+;; いわゆるインターフェース
+(ns picture-gallery.interface.gateway.auth.auth-service
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.auth :as auth-domain]
+            [orchestra.spec.test :as st]
             [integrant.core :as ig]))
 
 (defprotocol Auth
-  (decode-id-token [this id-token]))
+  (decode-id-token [this encrypted-id-token]))
 
-(extend-protocol Auth
-  picture_gallery.infrastructure.firebase.core.FirebaseBoundary
-  (decode-id-token [{:keys [firebase]} id-token]
-    (firebase-impl/safe-decode-token (:firebase-auth firebase) id-token)))
+(defn auth-repository? [inst]
+  (satisfies? Auth inst))
+
+(s/def ::auth-repository auth-repository?)
+
+(s/fdef decode-id-token
+  :args (s/cat :this ::auth-repository
+               :encrypted-id-token ::auth-domain/encrypted-id-token)
+  :ret ::auth-domain/decode-id-token-result)
 ```
 
 ```clojure
-(ns picture-gallery.interface.gateway.auth.firebase
+;; java でいう impl
+(ns picture-gallery.interface.gateway.auth.firebase.auth-service
   (:require [clojure.string]
             [picture-gallery.domain.error :as error-domain]
-            [picture-gallery.utils.error :refer [err->>]]))
+            [picture-gallery.utils.error :refer [err->>]]
+            [picture-gallery.interface.gateway.auth.auth-service :refer [Auth]]))
 
-(defn decode-token [firebase-auth id-token]
+(defn decode-token [firebase-auth encrypted-id-token]
   (-> firebase-auth
-      (.verifyIdToken id-token)
+      (.verifyIdToken encrypted-id-token)
       .getUid))
 
 (defn expired-id-token? [cause]
@@ -999,21 +1055,26 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 (defn unknown-id-token? [_]
   [nil error-domain/unknown-id-token])
 
-(defn safe-decode-token [firebase-auth id-token]
+(defn safe-decode-token [firebase-auth encrypted-id-token]
   (try
-    {:status :success
-     :body {:decoded-id-token (decode-token firebase-auth id-token)}}
+    [:success
+     {:id-token (decode-token firebase-auth encrypted-id-token)}]
     (catch Exception e
-      {:status :failure
-       :body (second
-              (err->>
-               (or (.getMessage e) "unknown")
-               expired-id-token?
-               invalid-id-token?
-               unknown-id-token?))})))
+      [:failure
+       (second
+        (err->>
+         (or (.getMessage e) "unknown")
+         expired-id-token?
+         invalid-id-token?
+         unknown-id-token?))])))
+
+(extend-protocol Auth
+  picture_gallery.infrastructure.firebase.core.FirebaseBoundary
+  (decode-id-token [{:keys [firebase]} encrypted-id-token]
+    (safe-decode-token (:firebase-auth firebase) encrypted-id-token)))
 ```
 
-試してみます (※実際はこうなるまで無限回試行錯誤してます)。
+試してみます (※実際はこうなるまで **無限回** 試行錯誤してます)。
 
 ```clojure
 (def system
@@ -1022,13 +1083,13 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 
 (decode-id-token
  (:picture-gallery.infrastructure.firebase.core/firebase system) "Hello")
-;; => {:status :failure, :body {:status 400, :body {:code 1702, :message the firebase token is invalid}}}
+;; => [:failure {:status 400, :body {:code 1702, :message the firebase token is invalid}}]
 (decode-id-token
  (:picture-gallery.infrastructure.firebase.core/firebase system) "<expired token>")
-;; => {:status :failure, :body {:status 400, :body {:code 1701, :message the firebase token is expired}}}
+;; => [:failure {:status 400, :body {:code 1701, :message the firebase token is expired}}]
  (decode-id-token
   (:picture-gallery.infrastructure.firebase.core/firebase system) "<valid token>")
-;; => {:status :success, :body {:decoded-id-token <decoded-token>}}
+;; => [:success, :body {:decoded-id-token <decoded-token>}]
 (ig/halt! system)
 ```
 
@@ -1036,32 +1097,729 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 
 - <https://github.com/firebase/firebase-admin-java/blob/d8b1583002d60568106bf4a7ba2d5bcbbb6c0463/src/main/java/com/google/firebase/auth/FirebaseTokenVerifierImpl.java>
 
-<a id="orgea8d8f9"></a>
+<a id="org95986f7"></a>
 
 ## SQL の実行機構
 
-使うライブラリは、 next.jdbc (<https://github.com/seancorfield/next-jdbc>) です。 next.jdbc は非常に低レベルから JDBC (Java の DB 操作を行うためのライブラリ) を使うことができるライブラリで、チュートリアルがしっかりしているライブラリです。
+使うライブラリは、 next.jdbc (<https://github.com/seancorfield/next-jdbc>) です。 next.jdbc は非常に低いレベルから JDBC (Java の DB 操作を行うためのライブラリ) を使うことができるライブラリで、チュートリアルがしっかりしているライブラリです。
 
-<a id="orge86d440"></a>
+本章では先程マイグレートした user テーブルとのやり取りを書いていきます。
 
-### PostgreSQL との接続
+```clojure
+(ns picture-gallery.interface.gateway.database.users-repository
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.users :as users-domain]
+            [integrant.core :as ig]
+            [orchestra.spec.test :as st]))
 
-<a id="orga53a509"></a>
+(defprotocol Users
+  (get-users [db])
+  (get-user-by-user-id [db user-id])
+  (get-exist-user-by-auth-token [db auth-token])
+  (create-user [db user-create-model])
+  (delete-user [db user-id logical?]))
+
+(defn users-repository? [inst]
+  (satisfies? Users inst))
+
+(s/def ::users-repository users-repository?)
+
+(s/fdef get-users
+  :args (s/cat :db ::users-repository)
+  :ret ::users-domain/users-model)
+
+(s/fdef get-user-by-user-id
+  :args (s/cat :db ::users-repository :user-id ::users-domain/user-id)
+  :ret (s/or :exist ::users-domain/user-model
+             :not-exist empty?))
+
+(s/fdef get-exist-user-by-auth-token
+  :args (s/cat :db ::users-repository :auth-token ::users-domain/id-token)
+  :ret (s/or :exist ::users-domain/user-model
+             :not-exist empty?))
+
+(s/fdef create-user
+  :args (s/cat :db ::users-repository :user-create-model ::users-domain/user-create-model)
+  :ret ::users-domain/user-model)
+
+(s/fdef delete-user
+  :args (s/cat :db ::users-repository :user-id ::users-domain/user-id :logical? boolean?)
+  :ret (s/and int? (partial <= 0)))
+```
+
+<details><summary>Users impl の実装</summary>
+
+```clojure
+;; ここは詳細なので説明を省略します。基本的には next.jdbc のガイドを利用した utils を利用しています。
+(ns picture-gallery.interface.gateway.database.sql.users-repository
+  (:require [picture-gallery.interface.gateway.database.sql.utils :as sql-utils]
+            [picture-gallery.interface.gateway.database.users-repository :refer [Users]]))
+
+;; SQL のモデルと domain のモデルを変換するための機構
+(defn user-create-model->sql [{:keys [user-id id-token]}]
+  {:id user-id
+   :auth_token id-token})
+
+(defn sql->user-model [{:keys [id auth_token created_at updated_at is_deleted]}]
+  {:user-id id
+   :id-token auth_token
+   :created-at (sql-utils/sql-to-long created_at)
+   :updated-at (when updated_at (sql-utils/sql-to-long updated_at))
+   :is-deleted is_deleted})
+
+(extend-protocol Users
+  picture_gallery.infrastructure.sql.sql.Boundary
+
+  (get-users [{:keys [spec]}]
+    (->> (sql-utils/get-all spec :users)
+         (mapv sql->user-model)))
+
+  (get-user-by-user-id [{:keys [spec]} user-id]
+    (let [sql-model (sql-utils/get-by-id spec :users :id user-id)]
+      (if sql-model (sql->user-model sql-model) nil)))
+
+  (get-exist-user-by-auth-token [{:keys [spec]} auth-token]
+    (let [sql-model (first (sql-utils/find-by-m spec :users {:auth_token auth-token :is_deleted false}))]
+      (if sql-model (sql->user-model sql-model) nil)))
+
+  (create-user [{:keys [spec]} user-create-model]
+    (sql->user-model
+     (sql-utils/insert! spec :users
+                        (user-create-model->sql user-create-model))))
+
+  (delete-user [{:keys [spec]} user-id logical?]
+    (if logical?
+      (sql-utils/logical-delete! spec :users {:id user-id})
+      (sql-utils/physical-delete! spec :users {:id user-id}))))
+```
+
+</details>
+
+実行例としてはこんな形になります。
+
+```clojure
+(def system (ig/init {:picture-gallery.infrastructure.env/env {}
+                      :picture-gallery.infrastructure.sql.sql/sql {:env (ig/ref :picture-gallery.infrastructure.env/env)}}))
+(def sample-user {:user-id "000000000000" :id-token "sample-token"})
+
+(create-user (:picture-gallery.infrastructure.sql.sql/sql system) sample-user)
+;; => {:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}
+
+(get-users (:picture-gallery.infrastructure.sql.sql/sql system))
+;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
+(get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000")
+;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
+(get-exist-user-by-auth-token (:picture-gallery.infrastructure.sql.sql/sql system) "sample-token")
+;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
+
+(delete-user (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000" true)
+;; => 1
+(get-exist-user-by-auth-token (:picture-gallery.infrastructure.sql.sql/sql system) "sample-token")
+;; => nil (論理削除したので nil)
+(get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000")
+;; => [{:user-id 000000000000, :id-token sample-token, :created-at 1616133702682, :updated-at nil, :is-deleted false}]
+
+(delete-user (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000" false)
+;; => 1 (こっちは物理削除)
+(get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000")
+;; => nil (物理削除したので nil)
+
+(ig/halt! system) ;; (不要なコネクションプールは閉じて下さい)
+```
+
+<a id="orgad0522a"></a>
 
 # interface の組み込み
 
-<a id="org526fd55"></a>
+(体感)一万年と二千年かかった下準備がようやくおわったので、残りの八千年かけてハンドラを usecase や interface と組み合わせて組み立てていきます。
+
+<a id="org7bfc030"></a>
+
+## サインアップ
+
+サインアップの流れは次のとおりです。
+
+1.  http からデータを持ってくる (controller)
+2.  ユーザを登録する (usecase)
+    1.  encrypted-id-token を decode する (gateway)
+    2.  id-token から 既存のアカウントがあるか確認する (gateway)
+    3.  新しい (重複のない) ユーザ ID を発行する
+        1.  ランダムなユーザ ID を発行する
+        2.  ユーザ ID が重複しているか調べる (gateway)
+        3.  ¬ 規定回数 ^ ユーザ ID が重複していれば 1. へ戻る
+        4.  規定回数を超えたらエラーハンドリング
+    4.  ユーザをデータベースに登録する (gateway)
+3.  登録したユーザデータを http の response に整形する (presenter)
+
+<a id="orgfaff47e"></a>
+
+## サインイン
+
+サインインの流れは次のとおりです。
+
+1.  http からデータを持ってくる (controller)
+2.  ユーザの確認をする
+    1.  encrypted-id-token を decode する (gateway)
+    2.  id-token から、既存のアカウントがあるか確認する (geteway)
+    3.  ユーザ情報を取得する
+3.  ユーザ情報を http の response に整形する (presenter)
+
+<a id="orgc9fbbc4"></a>
+
+## 実装
+
+<a id="org0f84422"></a>
+
+### サインアップ
+
+<details><summary>controller</summary>
+
+```clojure
+(ns picture-gallery.interface.controller.api.signup-post
+  (:require [clojure.spec.alpha :as s]
+            [clojure.walk :as w]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(defn http-> "
+  http request -> usecase input model
+  "
+  [input-data]
+  (let [{:keys [headers]} input-data
+        {:keys [authorization]} (w/keywordize-keys headers)
+        input-model {:encrypted-id-token authorization}
+        conformed-input-model (s/conform
+                               ::auth-domain/signup-input
+                               input-model)]
+    (if (not= ::s/invalid conformed-input-model)
+      [conformed-input-model nil]
+      [nil (error-domain/input-data-is-invalid (s/explain-str ::auth-domain/signup-input input-model))])))
+```
+
+</details>
+
+<details><summary>presenter</summary>
+
+```clojure
+(ns picture-gallery.interface.presenter.api.signup-post
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.openapi.auth :as auth-openapi]
+            [picture-gallery.domain.openapi.base :as base-openapi]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(s/def ::body ::auth-openapi/signup-response)
+(s/def ::http-output-data (s/keys :req-un [::base-openapi/status ::body]))
+(s/fdef ->http
+  :args (s/cat :args
+               (s/or :success (s/tuple ::auth-domain/signup-output nil?)
+                     :failure (s/tuple nil? ::error-domain/error)))
+  :ret (s/or :success ::http-output-date
+             :failure ::error-domain/error))
+
+(defn ->http "
+  usecase output model -> http response
+  "
+  [[output-data error]]
+  (if (nil? error)
+    {:status 201
+     :body output-data}
+    error))
+```
+
+</details>
+
+<details><summary>usecase</summary>
+
+```clojure
+(ns picture-gallery.usecase.signup
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.utils.error :refer [err->> border-error]]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]
+            [picture-gallery.interface.gateway.database.users-repository :as users-repository]
+            [picture-gallery.interface.gateway.auth.auth-service :as auth-service]
+            [picture-gallery.domain.users :as users-domain]))
+
+(s/fdef signup
+  :args (s/cat :input-model ::auth-domain/signup-input
+               :db ::users-repository/users-repository
+               :auth ::auth-service/auth-service)
+  :ret (s/or :success (s/tuple ::auth-domain/signin-output nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(defn decode-id-token "
+  decode encrypted id-token
+  "
+  [{:keys [input-model auth] :as m}]
+  (let [[[status body] err] (border-error {:function #(auth-service/decode-id-token auth (:encrypted-id-token input-model))
+                                           :error-wrapper error-domain/auth-error})]
+    (cond
+      err [nil err]
+      (= :failure status) [nil body]
+      :else [(assoc m :id-token (:id-token body)) nil])))
+
+(defn validate-duplicate-account "
+  validate duplicate account
+  by checking the active (not logical deleted) user which has the id-token
+  "
+  [{:keys [id-token db] :as m}]
+  (let [[active-user err] (border-error {:function #(users-repository/get-exist-user-by-auth-token db id-token)
+                                         :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      active-user [nil error-domain/duplicate-account-exist]
+      :else [m nil])))
+
+(defn give-new-user-id "
+  generate new unique user-id.
+  if it fails over 10 times, raise error
+  "
+  [{:keys [db] :as m}]
+  (loop [try-time 1
+         suggested-new-user-id (users-domain/gen-user-id)]
+    (let [[exist-user err] (border-error  {:function #(users-repository/get-user-by-user-id db suggested-new-user-id)
+                                           :error-wrapper error-domain/database-error})]
+      (cond
+        err [nil err]
+        (empty? exist-user) [(assoc m :new-user-id suggested-new-user-id) nil]
+        (> try-time 10) [nil error-domain/user-generation-error-by-user-id-allocation]
+        :else (recur (inc try-time)
+                     (users-domain/gen-user-id))))))
+
+(defn create-new-user "
+  create new user
+  "
+  [{:keys [id-token new-user-id db] :as m}]
+  (let [new-user {:user-id new-user-id
+                  :id-token id-token}
+        [saved-new-user err] (border-error {:function #(users-repository/create-user db new-user)
+                                            :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      :else [(assoc m :saved-new-user saved-new-user) nil])))
+
+(defn ->output-model "
+  format as output model
+  "
+  [{:keys [saved-new-user]}]
+  [{:user-id (:user-id saved-new-user)} nil])
+
+(defn signup [db auth input-model]
+  (err->>
+   {:input-model input-model
+    :db db
+    :auth auth}
+   decode-id-token  ;; id-token をデコードする
+   validate-duplicate-account ;; アカウントの重複がないかチャックする
+   give-new-user-id ;; 新規のユーザID を発行する
+   create-new-user ;; 新しいユーザを作成する
+   ->output-model ;; 出力モデルに整形する
+   ))
+```
+
+</details>
+
+<a id="orge9cd8dc"></a>
+
+### サインイン
+
+<details><summary>controller</summary>
+
+```clojure
+(ns picture-gallery.interface.controller.api.signin-post
+  (:require [clojure.spec.alpha :as s]
+            [clojure.walk :as w]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(defn http-> "
+  http request -> usecase input model
+  "
+  [input-data]
+  (let [{:keys [headers]} input-data
+        {:keys [authorization]} (w/keywordize-keys headers)
+        input-model {:encrypted-id-token authorization}
+        conformed-input-model (s/conform
+                               ::auth-domain/signin-input
+                               input-model)]
+    (if (not= ::s/invalid conformed-input-model)
+      [conformed-input-model nil]
+      [nil (error-domain/input-data-is-invalid (s/explain-str ::auth-domain/signin-input input-model))])))
+```
+
+</details>
+
+<details><summary>presenter</summary>
+
+```clojure
+(ns picture-gallery.interface.presenter.api.signin-post
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.openapi.auth :as auth-openapi]
+            [picture-gallery.domain.openapi.base :as base-openapi]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]))
+
+(s/def ::body ::auth-openapi/signin-response)
+(s/def ::http-output-data (s/keys :req-un [::base-openapi/status ::body]))
+(s/fdef ->http
+  :args (s/cat :args
+               (s/or :success (s/tuple ::auth-domain/signin-output nil?)
+                     :failure (s/tuple nil? ::error-domain/error)))
+  :ret (s/or :success ::http-output-date
+             :failure ::error-domain/error))
+
+(defn ->http "
+  usecase output model -> http response
+  "
+  [[output-data error]]
+  (if (nil? error)
+    {:status 201
+     :body output-data}
+    error))
+```
+
+</details>
+
+<details><summary>usecase</summary>
+
+```clojure
+(ns picture-gallery.usecase.signin
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.utils.error :refer [err->> border-error]]
+            [picture-gallery.domain.auth :as auth-domain]
+            [picture-gallery.domain.error :as error-domain]
+            [picture-gallery.interface.gateway.auth.auth-service :as auth-service]
+            [picture-gallery.interface.gateway.database.users-repository :as users-repository]))
+
+(s/fdef signin
+  :args (s/cat :input-model ::auth-domain/signin-input)
+  :ret (s/or :success (s/cat :signin-output ::auth-domain/signin-output :error nil)
+             :failure (s/cat :signin-output nil? :error ::error-domain/error)))
+
+(defn decode-id-token "
+  decode encrypted id-token
+  "
+  [{:keys [input-model auth] :as m}]
+  (let [[[status body] err] (border-error {:function #(auth-service/decode-id-token auth (:encrypted-id-token input-model))
+                                           :error-wrapper error-domain/auth-error})]
+    (cond
+      err [nil err]
+      (= :failure status) [nil body]
+      :else [(assoc m :id-token (:id-token body)) nil])))
+
+(defn get-exist-user-has-id-token "
+  get active (not logical deleted) user
+  which has id-token"
+  [{:keys [id-token db] :as m}]
+  (let [[active-user err] (border-error {:function #(users-repository/get-exist-user-by-auth-token db id-token)
+                                         :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      (empty? active-user) [nil error-domain/signin-failed-by-user-not-found]
+      :else [(assoc m :exist-user active-user) nil])))
+
+(defn ->output-model "
+  format as output model
+  "
+  [{:keys [exist-user]}]
+  [{:user-id (:user-id exist-user)} nil])
+
+(defn signin [db auth input-model]
+  (err->>
+   {:input-model input-model
+    :db db
+    :auth auth}
+   decode-id-token
+   get-exist-user-has-id-token
+   ->output-model))
+```
+
+</details>
+
+<a id="org4670042"></a>
+
+### ハンドラの修正
+
+db や auth の infrastructure と連携する必要があるため、 config と ハンドラを修正します。
+
+```clojure
+{:picture-gallery.infrastructure.env/env {}
+ :picture-gallery.infrastructure.logger/logger {:env #ig/ref :picture-gallery.infrastructure.env/env}
+ :picture-gallery.infrastructure.firebase.core/firebase {:env #ig/ref :picture-gallery.infrastructure.env/env}
+ :picture-gallery.infrastructure.sql.sql/sql {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                              :logger #ig/ref :picture-gallery.infrastructure.logger/logger}
+ :picture-gallery.infrastructure.sql.migrate/migration  {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                         :operation :migrate
+                                                         :logger #ig/ref :picture-gallery.infrastructure.logger/logger}
+ :picture-gallery.infrastructure.router.core/router {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                     :auth #ig/ref :picture-gallery.infrastructure.firebase.core/firebase
+                                                     :db #ig/ref :picture-gallery.infrastructure.sql.sql/sql}
+ :picture-gallery.infrastructure.server/server {:env #ig/ref :picture-gallery.infrastructure.env/env
+                                                :router #ig/ref :picture-gallery.infrastructure.router.core/router
+                                                :port 3000}}
+```
+
+ハンドラ
+
+```clojure
+(ns picture-gallery.infrastructure.router.core)
+
+(defn app [db auth]
+  (ring/ring-handler
+   (ring/router
+    [["/swagger.json"
+      {:get {:no-doc true
+             :swagger {:info {:title "picture-gallery-api"}
+                       :securityDefinitions
+                       {:Bearer
+                        {:type "apiKey"
+                         :in "header"
+                         :name "Authorization"}}
+                       :basePath "/"}
+
+             :handler (swagger/create-swagger-handler)}}]
+     ["/api"
+      (sample-router/sample-router)
+      (auth-router/auth-router db auth)]]
+
+    {:exception pretty/exception
+     :data {:coercion reitit.coercion.spec/coercion
+            :muuntaja m/instance
+            :middleware
+            [;; swagger feature
+             swagger/swagger-feature
+             ;; query-params & form-params
+             parameters/parameters-middleware
+             ;; content-negotiation
+             muuntaja/format-negotiate-middleware
+             ;; encoding response body
+             muuntaja/format-response-middleware
+             ;; exception handling
+             exception/exception-middleware
+             ;; decoding request body
+             muuntaja/format-request-middleware
+             ;; coercing response bodys
+             coercion/coerce-response-middleware
+             ;; coercing request parameters
+             coercion/coerce-request-middleware
+             ;; multipart
+             multipart/multipart-middleware]}})
+
+   (ring/routes
+    (swagger-ui/create-swagger-ui-handler {:path "/api"})
+    (ring/create-default-handler))
+   {:middleware [wrap-with-logger]}))
+
+(defmethod ig/init-key ::router [_ {:keys [env db auth]}]
+  (timbre/info "router got: env" env)
+  (timbre/info "router got: db" db)
+  (timbre/info "router got: auth" auth)
+  (app db auth))
+```
+
+```clojure
+(ns picture-gallery.infrastructure.router.auth
+  (:require
+   [picture-gallery.usecase.signin :as signin-usecase]
+   [picture-gallery.usecase.signup :as signup-usecase]
+   [picture-gallery.interface.controller.api.signin-post :as signin-post-controller]
+   [picture-gallery.interface.controller.api.signup-post :as signup-post-controller]
+   [picture-gallery.interface.presenter.api.signin-post :as signin-post-presenter]
+   [picture-gallery.interface.presenter.api.signup-post :as signup-post-presenter]
+   [picture-gallery.domain.openapi.auth :as auth-openapi]
+   [picture-gallery.utils.error :refer [err->>]]))
+
+;; handlers
+(defn signin-post-handler [db auth input-data]
+  (signin-post-presenter/->http
+   (err->> input-data
+           signin-post-controller/http->
+           (partial signin-usecase/signin db auth))))
+
+(defn signup-post-handler [db auth input-data]
+  (signup-post-presenter/->http
+   (err->> input-data
+           signup-post-controller/http->
+           (partial signup-usecase/signup db auth))))
+
+;; router
+(defn auth-router [db auth]
+  ["/auth"
+   ["/signin"
+    {:swagger {:tags ["auth"]}
+     :post {:summary "signin with firebase-auth token"
+            :swagger {:security [{:Bearer []}]}
+            :responses {201 {:body ::auth-openapi/signin-response}}
+            :handler (partial signin-post-handler db auth)}}]
+   ["/signup"
+    {:swagger {:tags ["auth"]}
+     :post {:summary "signup with firebase-auth token"
+            :swagger {:security [{:Bearer []}]}
+            :responses {201 {:body ::auth-openapi/signup-response}}
+            :handler (partial signup-post-handler db auth)}}]])
+```
+
+<a id="orgd4f75bb"></a>
 
 # 動作確認
 
-<a id="orgce21e80"></a>
+ここまでできたところで、実際に仮フロントエンドと swagger を経由して動作を確かめてみます。
 
-# 捕捉
+signin の例): ![img](./img/auth-sample.png)
 
-<a id="org860b3cb"></a>
+<a id="org07a9471"></a>
+
+# 付録・捕捉
+
+<a id="orga6c9efe"></a>
 
 ## 実装してみます
 
 期待する機能が実装可能かどうかを REPL を動かしながら試す。 実装可能であれば仕様を固めてテストを書いたり実装を進めたりして、実装できなそうであれば、仕様を見直す。
 
 特に実装が不透明なライブラリを使うときには、先にきっとこんなはずなテストを書いてから実装するよりも、こちらのほうが失敗が少ないので (n=1 orz)、Clojure や Python など使う際には、ぜひ REPL やインタプリタを活用してみて下さい。
+
+<a id="org63ece35"></a>
+
+## ランダムな数列と衝突確率
+
+ユーザ n 人を想定し、ランダム(要アルゴリズム)な k 桁の数列を id にしたときに衝突しない確率を考えてみます。
+
+```math
+\begin{align}
+&1 (1 - \frac{1}{10^k}) (1 - \frac{2}{10^k}) \cdots  (1 - \frac{n-1}{10^k})
+&= \Pi^{n-1}_{i=1}(1-\frac{i}{10^k})
+\end{align}
+```
+
+衝突する確率は次の通り (ただし i / 10<sup>k</sup> << n )
+
+```math
+\begin{align}
+&1 - \Pi^{n-1}_{i=1}(1-\frac{i}{10^k})
+&\approx 1- \Pi^{n-1}_{i=1}exp(- \frac{i}{10^k}) &\because e^x \approx 1 + x\ where \ x << n
+&= 1 - exp (- \frac{n(n-1)}{2} \frac{1}{10^k}) &\because \Sigma^{n-1}{i-1}i=\frac{n(n-1)}{2}
+&\approx 1 - exp (- \frac{n^2}{2 \cdot 10^k})
+\end{align}
+```
+
+仮に 15 桁でユーザ登録総数 100 万人未満のサービス開発をすると仮定すると、衝突する確率は `1 - exp(- (10^12)/(2 x 10^15)) = 1 - exp (- 1 / 2000) = 0.0005` なので、 1% 未満に落とせます。 とはいえ猿もキーボードを叩けばハムレットを書くので、最低でもリトライ＋上限試行回数を設ける必要があります。 (たとえ UUID であれ、 **衝突は起こります** )
+
+<a id="org2e3067b"></a>
+
+## テスト用データベースのセットアップ
+
+テスト用のデータベースをセットアップします。
+
+まずは `docker-compose.yaml` 。
+
+```yaml
+version: "3"
+services:
+  dev_db:
+    build: containers/postgres
+    ports:
+      - 5566:5432
+    volumes:
+      - "dev_db_volume:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_USER: meguru
+      POSTGERS_PASSWORD: emacs
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: pic_gallery
+    restart: always
+  test_db:
+    build: containers/postgres
+    ports:
+      - 5577:5432
+    volumes:
+      - "test_db_volume:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_USER: meguru
+      POSTGERS_PASSWORD: emacs
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: pic_gallery
+    restart: always
+  repl:
+    build: containers/api-server
+    command: /bin/bash
+    ports:
+      - 3000:3000
+      - 39998:39998
+    volumes:
+      - ".:/app"
+      - "lib_data:/root/.m2"
+    depends_on:
+      - dev_db
+volumes:
+  test_db_volume:
+  lib_data:
+```
+
+次に `project.clj`
+
+```clojure
+(defproject picture-gallery "0.1.0-SNAPSHOT"
+
+  :description "FIXME: write description"
+  :url "http://example.com/FIXME"
+  ;; :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
+  ;;           :url "https://www.eclipse.org/legal/epl-2.0/"}
+  ;; ...
+  :profiles
+  {:dev [:project/dev :profiles/dev]
+   :project/dev {:source-paths ["dev/src"]
+                 :resource-paths ["dev/resources"]}
+   :profiles/dev {}
+
+   :test [:project/test :profiles/test]
+   :project/test {:source-paths ["dev/src"]
+                  :resource-paths ["dev/resources"]}
+   :profiles/test {}
+
+   :repl {:prep-tasks ^:replace ["javac" "compile"]
+          :repl-options {:init-ns user}}
+   :uberjar {:aot :all
+             :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}}
+
+  :repl-options
+  {:host "0.0.0.0"
+   :port 39998}
+
+  ;; alias for coverage
+  ;; see. https://qiita.com/lagenorhynque/items/f1e3c75439c1625756f3
+  :aliases
+  {"coverage" ["cloverage"
+               "--ns-exclude-regex" "^(:?dev|user)$"
+               "--ns-exclude-regex" "picture-gallery.core$"
+               "--codecov"
+               "--summary"]})
+```
+
+そして、 `profiles.clj`
+
+```clojure
+{:profiles/dev
+ {:env
+  {:env "dev"
+   :database-adapter "postgresql"
+   :database-name "pic_gallery"
+   :database-username "meguru"
+   :database-password "emacs"
+   :database-server-name "dev_db"
+   :database-port-number "5432"
+   :migrations-folder "migrations"
+   :log-level "info"}}
+ :profiles/test
+ {:env
+  {:env "dev"
+   :database-adapter "postgresql"
+   :database-name "pic_gallery"
+   :database-username "meguru"
+   :database-password "emacs"
+   :database-server-name "test_db"
+   :database-port-number "5432"
+   :migrations-folder "migrations"
+   :log-level "info"}}}
+```
