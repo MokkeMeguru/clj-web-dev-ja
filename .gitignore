@@ -6,3 +6,7 @@ target/
 /chap1/picture-gallery-duct/
 /chap2/picture-gallery-bak/
 /chap2/picture-gallery-duct/
+/chap4/fba_front_sample/node_modules/
+package-lock.json
+/chap4/picture-gallery/resources/secrets/firebase_secrets.json
+/chap4/picture-gallery/resources/secrets/secret.txt

@@ -1,23 +1,25 @@
-- [Integrant](#orgcf22758)
-- [Clean Architecture と Directory Structure](#orga804d0e)
-  - [Clean Architecture](#orge3b322b)
-    - [依存関係を意識したサービス開発の例](#orgbb21dfe)
-  - [Clean Architecture のために Directory Structure を考える](#org0ed971e)
-- [余談: threading Macro と エラーハンドリング](#org1ee3d0b)
-  - [Threading Macro](#orgce2d650)
-  - [エラーハンドリング](#orgb24566e)
+- [Integrant](#org5545d41)
+- [Clean Architecture と Directory Structure](#org859ec5d)
+  - [Clean Architecture](#org41204d9)
+    - [依存関係を意識したサービス開発の例](#org9aceab1)
+  - [Clean Architecture のために Directory Structure を考える](#org1684417)
+- [余談: threading Macro と エラーハンドリング](#org2c680e9)
+  - [Threading Macro](#orgf7bcea5)
+  - [エラーハンドリング](#orgec03326)
 
-本稿は、Clojure における アプリ開発フレームワーク Integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
+本稿は、Clojure における アプリ開発フレームワーク integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
 
-<a id="orgcf22758"></a>
+<a id="org5545d41"></a>
 
 # Integrant
+
+> integrant (<https://github.com/weavejester/integrant>) は Data-Driven Architecture で アプリケーションを構築するための Clojure および ClojureScript のマイクロフレームワークです。
 
 Integrant (<https://github.com/weavejester/integrant>) は Clojure (ClojureScript) のアプリ開発のためのフレームワークです。
 
 類似する他言語で有名なフレームワークというと、Rails や Django あたりになるのかな、という気持ちもありますが、 Integrant はそれに比べると \***\*非常に薄い\*\*** フレームワークです。
 
-Integrant が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 1. アプリの立ち上げ 2. HotLoading 3. アプリの停止 が主になります。
+Integrant が提供してくれるのは、REPL 開発の支援のみで、より具体的には、 0. システム構成の読み込み 1. アプリの立ち上げ 2. 動的なアプリの更新 3. アプリの停止 が主になります。 HTTP ハンドラやルーティング、ORM などの親切かつ **魔法のような** 機能は提供していません。
 
 Integrant はフレームワークといえどもファイル構造に一切口出ししないため、プロジェクトの立ち上げから初期ディレクトリ構造の決定がややコストになります。 (逆に言えば、ディレクトリ構造を純粋な Clean Architecture ないし別のアーキテクチャにすることができます)
 
@@ -33,7 +35,7 @@ cd picture-gallery
 
 ※今回 Duct を用いていない理由は、Duct の詳細な実装を理解・説明するのが困難であること、 Integrant を活用する場面が多いことを挙げることができます。
 
-<a id="orga804d0e"></a>
+<a id="org859ec5d"></a>
 
 # Clean Architecture と Directory Structure
 
@@ -58,7 +60,7 @@ cd picture-gallery
 
 今回はここに Clean Architecture という概念を導入して開発を進めていきます。
 
-<a id="orge3b322b"></a>
+<a id="org41204d9"></a>
 
 ## Clean Architecture
 
@@ -82,7 +84,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
 
 参考: Clean Architecture で API Server を構築してみる(<https://qiita.com/hirotakan/items/698c1f5773a3cca6193e>)
 
-<a id="orgbb21dfe"></a>
+<a id="org9aceab1"></a>
 
 ### 依存関係を意識したサービス開発の例
 
@@ -113,7 +115,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
 
   ルーティングや、DB への接続を行います。
 
-<a id="org0ed971e"></a>
+<a id="org1684417"></a>
 
 ## Clean Architecture のために Directory Structure を考える
 
@@ -145,7 +147,7 @@ Clean Architecture は要素ごとに分割、という点が重要なので、�
         |   |   `-- image_processor (画像加工)
         |   |-- gateway
         |   |   |-- database        (DB に対する クエリ実行)
-        |   |   `-- firebase        (firebase との通信)
+        |   |   `-- auth            (認証処理 (firebase を用いる))
         |   `-- presenter
         |       `-- api             (出力 json へのシリアライズ)
         |-- usecase
@@ -177,11 +179,11 @@ dev フォルダを利用するために、 `project.clj` を次のように修�
 
 (このあたりのコードはかなり Duct の構造を意識しています)
 
-<a id="org1ee3d0b"></a>
+<a id="org2c680e9"></a>
 
 # 余談: threading Macro と エラーハンドリング
 
-<a id="orgce2d650"></a>
+<a id="orgf7bcea5"></a>
 
 ## Threading Macro
 
@@ -236,7 +238,7 @@ Clojure では threading macro がこの要望を答えるものとしてあり�
 
 という形に書くことができます。
 
-<a id="orgb24566e"></a>
+<a id="orgec03326"></a>
 
 ## エラーハンドリング
 

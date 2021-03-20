@@ -1,0 +1,41 @@
+version: "3"
+services:
+  dev_db:
+    build: containers/postgres
+    ports:
+      - 5566:5432
+    volumes:
+      - "dev_db_volume:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_USER: meguru
+      POSTGERS_PASSWORD: emacs
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: pic_gallery
+    restart: always
+  test_db:
+    build: containers/postgres
+    ports:
+      - 5577:5432
+    volumes:
+      - "test_db_volume:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_USER: meguru
+      POSTGERS_PASSWORD: emacs
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: pic_gallery
+    restart: always
+  repl:
+    build: containers/api-server
+    command: /bin/bash
+    ports:
+      - 3000:3000
+      - 39998:39998
+    volumes:
+      - ".:/app"
+      - "lib_data:/root/.m2"
+    depends_on:
+      - dev_db
+volumes:
+  dev_db_volume:
+  test_db_volume:
+  lib_data:

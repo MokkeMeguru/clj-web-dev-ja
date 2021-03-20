@@ -16,17 +16,14 @@
 
 (defmethod ig/init-key ::env [_ _]
   (println "loading environment via environ")
-  (let [database-url (env :database-url)
-        running (env :env)
+  (let [running (env :env)
         log-level (decode-log-level (env :log-level))]
     (println "running in " running)
-    (println "database-url " database-url)
     (println "log-level " log-level)
     (when (.contains ["test" "dev"] running)
       (println "orchestra instrument is active")
       (st/instrument))
-    {:database-url database-url
-     :running running
+    {:running running
      :log-level log-level}))
 
 ;; (defmethod ig/halt-key! ::env [_ _]

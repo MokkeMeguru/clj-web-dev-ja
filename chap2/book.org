@@ -140,10 +140,10 @@ Rails や Spring といったより便利なフレームワークを用いたサ
 [integrant/repl "0.3.2"]
 
 ;; firebase auth のためのライブラリ
-[com.google.firebase/firebase-admin "7.1.0" :exclusions [com.google.http-client/google-http-client]]
+[com.google.firebase/firebase-admin "7.1.0"]
 
 ;; ルーティング、HTTP ハンドラ のためのライブラリ
-[ring/ring-jetty-adapter "1.9.1" :exclusions [commons-codec]]
+[ring/ring-jetty-adapter "1.9.1"]
 [metosin/reitit "0.5.12"]
 [metosin/reitit-swagger "0.5.12"]
 [metosin/reitit-swagger-ui "0.5.12"]
@@ -153,7 +153,7 @@ Rails や Spring といったより便利なフレームワークを用いたサ
 [com.fasterxml.jackson.core/jackson-core "2.12.2"]
 
 ;; 暗号化通信のためのライブラリ
-[buddy/buddy-hashers "1.7.0" :exclusions [commons-codec]]
+[buddy/buddy-hashers "1.7.0" ]
 
 ;; 環境変数の読み込みのためのライブラリ
 [environ "1.2.0"]
@@ -164,7 +164,7 @@ Rails や Spring といったより便利なフレームワークを用いたサ
 
 ;; データベースとの通信を行うためのライブラリ
 [honeysql "1.0.461"]
-[seancorfield/next.jdbc "1.1.643" :exclusions [org.clojure/tools.logging]]
+[seancorfield/next.jdbc "1.1.643"]
 [hikari-cp "2.13.0"]
 [org.postgresql/postgresql "42.2.19"]
 [net.ttddyy/datasource-proxy "1.7"]
@@ -390,17 +390,14 @@ user>
 ;; (start) で実行される部分
 (defmethod ig/init-key ::env [_ _]
   (println "loading environment via environ")
-  (let [database-url (env :database-url)
-        running (env :env)
-        log-level (decode-log-level (env :log-level))]
+  (let [running (env :env)
+    log-level (decode-log-level (env :log-level))]
     (println "running in " running)
-    (println "database-url " database-url)
     (println "log-level " log-level)
     (when (.contains ["test" "dev"] running)
       (println "orchestra instrument is active")
       (st/instrument))
-    {:database-url database-url
-     :running running
+    {:running running
      :log-level log-level}))
 
 ;; (stop) で実行される部分
@@ -424,7 +421,6 @@ user> (dev)
 dev> (start)
 loading environment via environ
 running in  nil
-database-url  nil
 log-level  :info
 ;; => :initiated
 dev>
@@ -444,8 +440,6 @@ dev>
  :plugins
  [;; 開発のためのプラグイン
   [lein-ancient "0.6.15"]
-  ;; cli command's execution helper (後の章で必要)
-  [lein-exec "0.3.7"]
   ;; test coverage
   [lein-cloverage "1.2.2"]
   ;; environ in leiningen (leiningen と environ を組み合わせるために必要な plugin)
@@ -470,7 +464,6 @@ dev>
 {:profiles/dev
  {:env
   {:env "dev"
-   :database-url "jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs"
    :log-level "info"}}}
 #+END_SRC
 
@@ -483,7 +476,6 @@ user=> (dev)
 dev=> (start)
 loading environment via environ
 running in  dev
-database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
 log-level  :info
 orchestra instrument is active
 :initiated
@@ -501,7 +493,6 @@ $ lein with-profile dev run
 Warning: environ value info for key :log-level has been overwritten with error
 loading environment via environ
 running in  dev
-database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
 log-level  :error
 orchestra instrument is active
 #+end_example
@@ -543,9 +534,8 @@ orchestra instrument is active
    #+BEGIN_SRC sh
 # scripts/print_env.sh
 #!/usr/bin/env bash
-set -euo pipefail
 
-lein with-profile dev env -p src/picture_gallery/cmd/print_env/core.clj
+lein with-profile dev run -m picture-gallery.cmd.print-env.core/-main
   #+END_SRC
 
 以上です。
@@ -557,7 +547,6 @@ $ ./scripts/print_env.sh
 print environment variables
 loading environment via environ
 running in  dev
-database-url  jdbc:postgresql://dev_db:5432/picture_gallery_db?user=meguru&password=emacs
 log-level  :info
 orchestra instrument is active
 #+end_example

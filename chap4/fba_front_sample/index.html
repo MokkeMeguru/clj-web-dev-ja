@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.js"></script>
+        <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
+    </head>
+    <body>
+        <!-- The surrounding HTML is left untouched by FirebaseUI.
+             Your app may use that space for branding, controls and other customizations.-->
+        <h1>Sample Firebase Auth Page</h1>
+        <div>see. developer console</div>
+        <div id="firebaseui-auth-container"></div>
+        <div id="loader">Loading...</div>
+        <button id="signout">SignOut</div>
+        
+        <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-auth.js"></script>
+        <script type="text/javascript">
+
+         // set your values from firebase project
+         // --------------------------------------------
+         var apiKey = "AIzaSyA-AfxCZtmMBfbA6xJsDqA5wSNmod8VrIk"
+         var projectId = "sample-picture-gallery-c12rb"
+         // --------------------------------------------
+         
+         var authDomain = projectId + ".firebaseapp.com"        
+         var firebaseConfig = {
+             apiKey: apiKey,
+             authDomain:  authDomain,
+             projectId: projectId,
+         }
+         firebase.initializeApp(firebaseConfig);
+
+         // Initialize the FirebaseUI Widget using Firebase.
+         var uiConfig = {
+             callbacks: {
+                 signInSuccessWithAuthResult: function(authResult, redirectUrl){ return true;},
+                 uiShown: function() { document.getElementById("loader").style.display='none'; }
+             },
+             signInFlow: 'redirect',
+             signInSuccessUrl: '/',
+             signInOptions: [
+                 firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+             ]
+         }
+
+         var ui = new firebaseui.auth.AuthUI(firebase.auth());
+         var signOutButton = document.getElementById("signout");
+         // default state
+         ui.start('#firebaseui-auth-container', uiConfig);
+         signOutButton.style.display='none'
+         
+         // already signIned
+         firebase.auth().onAuthStateChanged((user) => {
+             if (user) {
+                 firebase.auth().currentUser.getIdToken(true).then(function(idToken) {
+                     console.log("id token is below:")
+                     console.log(idToken);
+                 })
+                 ui.delete()
+                 signOutButton.style.display='block'
+             }
+         }) 
+
+         // signout
+         signOutButton.addEventListener('click', function() {
+             console.log("signout")
+             firebase.auth().signOut().then(_ => {
+                 location.reload()
+             })
+         })
+
+         
+        </script>
+
+    </body>
+</html>
+

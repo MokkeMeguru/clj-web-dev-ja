@@ -140,7 +140,7 @@ picture_gallery/src
     |   |   `-- image_processor (画像加工)
     |   |-- gateway
     |   |   |-- database        (DB に対する クエリ実行)
-    |   |   `-- firebase        (firebase との通信)
+    |   |   `-- auth            (認証処理 (firebase を用いる))
     |   `-- presenter
     |       `-- api             (出力 json へのシリアライズ)
     |-- usecase
