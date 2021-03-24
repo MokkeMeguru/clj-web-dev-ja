@@ -2,7 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [picture-gallery.domain.users :as users-domain]
             [integrant.core :as ig]
-            [orchestra.spec.test :as st]))
+            [orchestra.spec.test :as st]
+            [next.jdbc :as jdbc]))
 
 (defprotocol Users
   (get-users [db])
@@ -39,15 +40,18 @@
   :ret (s/and int? (partial <= 0)))
 
 ;; (st/instrument)
+
 ;; (def system (ig/init {:picture-gallery.infrastructure.env/env {}
 ;;                       :picture-gallery.infrastructure.sql.sql/sql {:env (ig/ref :picture-gallery.infrastructure.env/env)}}))
 
 ;; (def sample-user {:user-id "000000000000000" :id-token "sample-token"})
 ;; (create-user (:picture-gallery.infrastructure.sql.sql/sql system) sample-user)
 
-;; (get-users (:picture-gallery.infrastructure.sql.sql/sql system))
+;; (Get-users (:picture-gallery.infrastructure.sql.sql/sql system))
 ;; (get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000000")
 ;; (get-exist-user-by-auth-token (:picture-gallery.infrastructure.sql.sql/sql system) "sample-token")
 ;; (delete-user (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000000" true)
 ;; (delete-user (:picture-gallery.infrastructure.sql.sql/sql system) "000000000000000" false)
 ;; (ig/halt! system)
+
+;; (get-user-by-user-id (:picture-gallery.infrastructure.sql.sql/sql system) "*")

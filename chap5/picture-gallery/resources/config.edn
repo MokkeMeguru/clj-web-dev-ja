@@ -3,6 +3,7 @@
  :picture-gallery.infrastructure.firebase.core/firebase {:env #ig/ref :picture-gallery.infrastructure.env/env}
  :picture-gallery.infrastructure.sql.sql/sql {:env #ig/ref :picture-gallery.infrastructure.env/env
                                               :logger #ig/ref :picture-gallery.infrastructure.logger/logger}
+ :picture-gallery.infrastructure.image-db.core/image-db {:env #ig/ref :picture-gallery.infrastructure.env/env}
  :picture-gallery.infrastructure.sql.migrate/migration  {:env #ig/ref :picture-gallery.infrastructure.env/env
                                                          :operation :migrate
                                                          :logger #ig/ref :picture-gallery.infrastructure.logger/logger}

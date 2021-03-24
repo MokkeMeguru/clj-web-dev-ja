@@ -10,12 +10,10 @@
 
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.exception :as exception]
-   [reitit.ring.middleware.multipart :as multipart]
+   [picture-gallery.infrastructure.router.utils.multipart :as multipart]
+   [reitit.ring.middleware.multipart :as reitit-multipart]
    [reitit.ring.middleware.parameters :as parameters]
-   [reitit.ring.middleware.dev :as dev]
-   [reitit.ring.spec :as spec]
 
-   [spec-tools.spell :as spell]
    [muuntaja.core :as m]
 
    [ring.logger :refer [wrap-with-logger]]
@@ -25,7 +23,30 @@
    [reitit.dev.pretty :as pretty]
 
    [picture-gallery.infrastructure.router.sample :as sample-router]
-   [picture-gallery.infrastructure.router.auth :as auth-router]))
+   [picture-gallery.infrastructure.router.auth :as auth-router]
+   [picture-gallery.infrastructure.router.users :as users-router]
+   [picture-gallery.infrastructure.router.pics :as pics-router]
+   [picture-gallery.infrastructure.router.images :as images-router]
+   [clojure.spec.alpha :as s]
+   [spec-tools.core :as stc]
+   [spec-tools.swagger.core :as swagger-spec]))
+
+(def temp-file-part
+  (stc/spec {:spec (s/keys :req-un [::filename ::content-type ::tempfile ::size])
+             :swagger/type "file"}))
+(def sample-string
+  (stc/spec
+   {:spec string?
+    :swagger/type "string"}))
+
+(swagger-spec/transform
+ (s/* temp-file-part))
+
+(swagger-spec/transform
+ (s/* string?))
+
+(swagger-spec/transform
+ (s/* sample-string))
 
 (defn app [db auth]
   (ring/ring-handler
@@ -41,9 +62,13 @@
                        :basePath "/"}
 
              :handler (swagger/create-swagger-handler)}}]
+
      ["/api"
       (sample-router/sample-router)
-      (auth-router/auth-router db auth)]]
+      (auth-router/auth-router db auth)
+      (users-router/users-router db auth)
+      (pics-router/pics-router db auth nil)
+      (images-router/images-router db nil)]]
 
     {:exception pretty/exception
      :data {:coercion reitit.coercion.spec/coercion
@@ -66,7 +91,9 @@
              ;; coercing request parameters
              coercion/coerce-request-middleware
              ;; multipart
-             multipart/multipart-middleware]}})
+             (multipart/create-multipart-middleware
+              {:force-vectorize-keys [:images]})
+             reitit-multipart/multipart-middleware]}})
 
    (ring/routes
     (swagger-ui/create-swagger-ui-handler {:path "/api"})

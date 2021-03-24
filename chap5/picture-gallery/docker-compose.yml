@@ -35,6 +35,7 @@ services:
       - "lib_data:/root/.m2"
     depends_on:
       - dev_db
+      - test_db
 volumes:
   dev_db_volume:
   test_db_volume:

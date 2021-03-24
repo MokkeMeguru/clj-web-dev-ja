@@ -33,11 +33,13 @@
   (let [database-options (get-database-options)
         running (env :env)
         migrations-folder (env :migrations-folder)
-        log-level (decode-log-level (env :log-level))]
+        log-level (decode-log-level (env :log-level))
+        local-image-db-parent-dir (env :local-image-db-parent-dir)]
     (println "running in " running)
     (println "log-level " log-level)
-    (println "migrations-folder" migrations-folder)
-    (println "database options" database-options)
+    (println "migrations-folder " migrations-folder)
+    (println "database options " database-options)
+    (println "local image-db parent dir " local-image-db-parent-dir)
     (when (.contains ["test" "dev"] running)
       (println "orchestra instrument is active")
       (st/instrument))
@@ -45,7 +47,8 @@
      :running running
      :migrations-folder migrations-folder
      :log-level log-level
-     :firebase-credentials (GoogleCredentials/getApplicationDefault)}))
+     :firebase-credentials (GoogleCredentials/getApplicationDefault)
+     :local-image-db-parent-dir local-image-db-parent-dir}))
 
 ;; (defmethod ig/halt-key! ::env [_ _]
 ;;   nil)

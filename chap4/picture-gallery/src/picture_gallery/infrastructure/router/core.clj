@@ -10,7 +10,7 @@
 
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.exception :as exception]
-   [reitit.ring.middleware.multipart :as multipart]
+
    [reitit.ring.middleware.parameters :as parameters]
    [reitit.ring.middleware.dev :as dev]
    [reitit.ring.spec :as spec]

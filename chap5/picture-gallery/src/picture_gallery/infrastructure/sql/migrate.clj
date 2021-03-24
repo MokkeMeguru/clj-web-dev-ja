@@ -26,7 +26,6 @@
         (throw (ex-info message {}))))
     {}))
 
-;;
 ;; (def config
 ;;   {:datastore (jdbc/sql-database {:dbtype "postgresql"
 ;;                                   :dbname "pic_gallery"

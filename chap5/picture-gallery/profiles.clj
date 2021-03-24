@@ -8,7 +8,8 @@
    :database-server-name "dev_db"
    :database-port-number "5432"
    :migrations-folder "migrations"
-   :log-level "info"}}
+   :log-level "info"
+   :local-image-db-parent-dir "./dev-image-db"}}
  :profiles/test
  {:env
   {:env "dev"
@@ -19,4 +20,5 @@
    :database-server-name "test_db"
    :database-port-number "5432"
    :migrations-folder "migrations"
-   :log-level "info"}}}
+   :log-level "info"
+   :local-image-db-parent-dir "./test-image-db"}}}
