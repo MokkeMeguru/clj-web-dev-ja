@@ -136,10 +136,10 @@ picture_gallery/src
     |   `-- sql                 (DB との接続、マイグレーション)
     |-- interface
     |   |-- controller
-    |   |   |-- api             (入力 json へのデシリアライズ)
-    |   |   `-- image_processor (画像加工)
+    |   |   `-- api             (入力 json へのデシリアライズ)
     |   |-- gateway
     |   |   |-- database        (DB に対する クエリ実行)
+    |   |   |-- image_db        (画像 に対する クエリ実行)
     |   |   `-- auth            (認証処理 (firebase を用いる))
     |   `-- presenter
     |       `-- api             (出力 json へのシリアライズ)
