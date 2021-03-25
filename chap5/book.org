@@ -316,7 +316,7 @@ interface も前回と同様に、 ~defprotcol~ を書いて、実装を書く�
 protocol は次の通り。保存、取得、削除のみの小さい interface です。
 
 #+BEGIN_SRC clojure
-(ns picture-gallery.interface.gateway.image-db.pics-repository
+(ns picture-gallery.interface.gateway.image-db.pics-service
   (:import (java.io File))
   (:require [clojure.spec.alpha :as s]
             [picture-gallery.domain.pics :as pics-domain]
@@ -325,38 +325,36 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
 
 (defprotocol Pics
   (get-pic-image [image-db blob])
-  (save-pic-image [image-db ^File image blob])
+  (save-pic-image [image-db ^File image])
   (delete-pic-image [image-db blob]))
 
-(defn pics-repository? [inst]
+(defn pics-service? [inst]
   (satisfies? Pics inst))
 
-(s/def ::pics-repository pics-repository?)
+(s/def ::pics-service pics-service?)
 
 (s/fdef get-pic-image
-  :args (s/cat :image-db ::pics-repository
+  :args (s/cat :image-db ::pics-service
                :blob ::pics-domain/image-url)
   :ret (s/or :exist ::pics-domain/image-file
              :not-exist empty?))
 
 (s/fdef save-pic-image
-  :args (s/cat :image-db ::pics-repository
-               :image ::pics-domain/image-file
-               :blob ::pics-domain/image-url)
+  :args (s/cat :image-db ::pics-service
+               :image ::pics-domain/image-file)
   :ret ::pics-domain/image-url)
 
 (s/fdef delete-pic-image
-  :args (s/cat :image-db ::pics-repository
+  :args (s/cat :image-db ::pics-service
                :blob ::pics-domain/image-url)
   :ret (s/and int? (partial <= 0)))
-
 #+END_SRC
 
 <details><summary>impl</summary>
 
 #+BEGIN_SRC clojure
-(ns picture-gallery.interface.gateway.image-db.local.pics-repository
-  (:require [picture-gallery.interface.gateway.image-db.pics-repository :refer [Pics]]
+(ns picture-gallery.interface.gateway.image-db.local.pics-service
+  (:require [picture-gallery.interface.gateway.image-db.pics-service :refer [Pics]]
             [clojure.java.io :as io]
             [taoensso.timbre :as timbre]))
 
@@ -367,13 +365,20 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
     (let [file (io/file parent-dir "pic" blob)]
       (if (.isFile file) file nil)))
 
-  (save-pic-image [{{:keys [parent-dir]} :image-db} image blob]
+  (save-pic-image [{{:keys [parent-dir]} :image-db} image]
     (try
-      (io/copy image (io/file parent-dir "pic" blob))
-      blob
+      ;; check duplicate
+      (loop [blob (java.util.UUID/randomUUID)
+             retry 0]
+        (let [file (io/file parent-dir "pic" (.toString blob))]
+          (cond
+            (> retry 10) (throw (ex-info "save pic's image failed: at apply unique random uuid"))
+            (and file (.isFile file)) (recur (java.util.UUID/randomUUID) (inc retry))
+            :else (do (io/copy image file)
+                      (.toString blob)))))
       (catch java.io.IOException e
         (timbre/error "Pics save image Error: " (.getMessage e))
-        (throw (ex-info "failed to save image" {:blob blob :image image})))))
+        (throw (ex-info "failed to save image" {:parent-dir parent-dir :image image})))))
 
   (delete-pic-image [{{:keys [parent-dir]} :image-db} blob]
     (try
@@ -389,7 +394,162 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
 今回は、1つの投稿について、複数枚の画像が投稿できることを（長期的に）想定しているので、 テーブルを分離し( one-many )ます。
 
 そして、usecase に transaction を持ち込まないため、この複数テーブルの操作を一つの repository に押し込んでしまいます。
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.interface.gateway.database.pics-repository
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.pics :as pics-domain]
+            [picture-gallery.domain.users :as users-domain]
+            [picture-gallery.domain.base :as base-domain]
+            [clojure.java.io :as io]
+            [integrant.core :as ig]
+            [orchestra.spec.test :as st]
+            [next.jdbc :as jdbc]))
+
+(defprotocol Pics
+  (get-pics [db])
+  (get-pics-by-user [db user-id page-id])
+  (get-pic [db pic-id])
+  (create-pic [db pic-create-model state])
+  (update-pic-state [db pic-id state])
+  (delete-pic [db pic-id logical?]))
+
+(defn pics-repository? [inst]
+  (satisfies? Pics inst))
+
+(s/def ::pics-repository pics-repository?)
+
+(s/fdef get-pics
+  :args (s/cat :db ::pics-repository)
+  :ret ::pics-domain/pics-model)
+
+(s/fdef get-pics-by-user
+  :args (s/cat :db ::pics-repository
+               :user-id ::users-domain/user-id
+               :page-id pos-int?)
+  :ret ::pics-domain/pics-model)
+
+(s/fdef get-pic
+  :args (s/cat :db ::pics-repository
+               :pic-id ::pics-domain/pic-id)
+  :ret (s/or :exist ::pics-domain/pic-model
+             :not-exist empty?))
+
+(s/fdef create-pic
+  :args (s/cat :db ::pics-repository
+               :pic-create-model ::pics-domain/pic-create-model
+               :state ::base-domain/tcc-state)
+  :ret (s/tuple ::pics-domain/pic-model ::base-domain/tcc-state))
+
+(s/fdef update-pic-state
+  :args (s/cat :db ::pics-repository
+               :pic-id ::pics-domain/pic-id
+               :state ::base-domain/tcc-state)
+  :ret (s/and int? (partial <= 0)))
+
+(s/fdef delete-pic
+  :args (s/cat :db ::pics-repository
+               :pic-id ::pics-domain/pic-id
+               :logical? boolean?)
+  :ret (s/and int? (partial <= 0)))
+#+END_SRC
+
+<details><summary>impl(複数テーブルの操作のため、かなり長いです)</summary>
+
+#+BEGIN_SRC clojure
+(ns picture-gallery.interface.gateway.database.sql.pics-repository
+  (:require [picture-gallery.interface.gateway.database.pics-repository :refer [Pics]]
+            [picture-gallery.interface.gateway.database.sql.utils :as sql-utils]
+            [next.jdbc :as jdbc]
+            [clojure.string]
+            [next.jdbc.sql :as njs]
+            [next.jdbc.types :refer [as-other]]
+            [clojure.spec.alpha :as s]))
+
+(defn pic-create-model->sql [{:keys [user-id title description]} state]
+  (cond->
+   {:user_id user-id
+    :title title
+    :tcc_state (as-other (name state))}
+    description (assoc :description description)))
+
+(defn pic-image-urls->sql [image-urls]
+  (vec (map-indexed  (fn [idx image-url]
+                       {:blob image-url
+                        :index idx}) image-urls)))
+
+(defn sql->pic-model [sql-pic sql-pic-image]
+  (let [{:keys [id user_id title description created_at updated_at is_deleted tcc_state]} sql-pic
+        image-urls (mapv #(:blob %) (sort-by :index sql-pic-image))]
+    (if-not id
+      nil
+      (cond->
+       {:pic-id id
+        :user-id user_id
+        :title title
+        :image-urls image-urls
+        :created-at (sql-utils/sql-to-long created_at)
+        :is-deleted is_deleted
+        :tcc-state tcc_state}
+        description (assoc :description description)
+        updated_at (assoc :updated-at (sql-utils/sql-to-long updated_at))))))
+
+(def sql-basic-selection
+  "SELECT * FROM pics INNER JOIN pic_images ON (pics.id = pic_images.id)")
+
+(extend-protocol Pics
+  picture_gallery.infrastructure.sql.sql.Boundary
+
+  (get-pics [{:keys [spec]}]
+    (with-open [conn (jdbc/get-connection (:datasource spec))]
+      (let [pics (jdbc/execute! conn [(clojure.string/join " " [sql-basic-selection "limit 100"])] sql-utils/default-jdbc-option)
+            pics-images (mapv #(jdbc/execute! conn ["SELECT * FROM pic_images WHERE id = ?" (:id %)] sql-utils/default-jdbc-option) pics)]
+        (mapv sql->pic-model pics pics-images))))
+
+  (get-pics-by-user [{:keys [spec]} user-id page-id]
+    (with-open [conn (jdbc/get-connection (:datasource spec))]
+      (let [sql-offset (* 20 (dec page-id))
+            pics (jdbc/execute! conn ["SELECT * FROM pics WHERE user_id = ? AND is_deleted = false AND tcc_state = ? limit 20 offset ?" user-id (as-other "confirm") sql-offset] sql-utils/default-jdbc-option)
+            pics-head-images (mapv #(jdbc/execute! conn ["SELECT * FROM pic_images WHERE id = ? AND index = 0" (:id %)] sql-utils/default-jdbc-option) pics)]
+        (mapv sql->pic-model pics pics-head-images))))
+
+  (get-pic [{:keys [spec]} pic-id]
+    (with-open [conn (jdbc/get-connection (:datasource spec))]
+      (sql->pic-model
+       (jdbc/execute-one! conn ["SELECT * FROM pics WHERE id = ? AND is_deleted = false AND tcc_state = ?" pic-id (as-other "confirm")] sql-utils/default-jdbc-option)
+       (jdbc/execute! conn ["SELECT * FROM pic_images WHERE id = ?" pic-id] sql-utils/default-jdbc-option))))
+
+  (create-pic [{:keys [spec]} pic-create-model state]
+    (let [sql-pic-create-model (pic-create-model->sql pic-create-model state)
+          sql-pic-image-urls (pic-image-urls->sql (:image-urls pic-create-model))]
+      (jdbc/with-transaction [tx (:datasource spec)]
+        (let [pic-id (loop [pic-id (java.util.UUID/randomUUID) retry 0]
+                       (cond
+                         (> retry 10) (throw (ex-info "pic's unique random uuid generation failed" {:pic-create-model pic-create-model}))
+                         (nil? (jdbc/execute-one! tx ["SELECT * FROM pics WHERE id = ?" pic-id])) pic-id
+                         :else (recur (java.util.UUID/randomUUID) (inc retry))))
+              pic-result (njs/insert! tx :pics (assoc sql-pic-create-model :id pic-id) sql-utils/default-jdbc-option)
+              pic-image-result (njs/insert-multi! tx :pic_images [:blob :id :index] (mapv (fn [{:keys [blob index]}] [blob pic-id index]) sql-pic-image-urls) sql-utils/default-jdbc-option)]
+          [(sql->pic-model pic-result pic-image-result) (keyword (:tcc_state pic-result))]))))
+
+  (update-pic-state [{:keys [spec]} pic-id state]
+    (sql-utils/update! spec :pics {:tcc_state (as-other (name state))} {:id pic-id}))
+
+  (delete-pic [{:keys [spec]} pic-id logical?]
+    (if logical?
+      (sql-utils/logical-delete! spec :pics {:id pic-id})
+      (sql-utils/physical-delete! spec :pics {:id pic-id}))))
+#+END_SRC
+</details>
 * interface の組み込み
+usecase 層に interface を組み込んでいきます。
+一番問題となるのは、投稿処理の部分で、TCCパターンを組み合わせて実装することになります。
+
+そこで、まずは実装フローを図にしてみます。
+
+#+ATTR_ORG: :width 200
+[[./img/pic_tcc_flow.png]]
+
 
 * 動作確認
 * 付録

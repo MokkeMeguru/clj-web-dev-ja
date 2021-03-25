@@ -7,11 +7,11 @@
    :auth_token id-token})
 
 (defn sql->user-model [{:keys [id auth_token created_at updated_at is_deleted]}]
-  {:user-id id
-   :id-token auth_token
-   :created-at (sql-utils/sql-to-long created_at)
-   :updated-at (when updated_at (sql-utils/sql-to-long updated_at))
-   :is-deleted is_deleted})
+  (cond-> {:user-id id
+           :id-token auth_token
+           :created-at (sql-utils/sql-to-long created_at)
+           :is-deleted is_deleted}
+    updated_at (assoc :updated-at (sql-utils/sql-to-long updated_at))))
 
 (extend-protocol Users
   picture_gallery.infrastructure.sql.sql.Boundary

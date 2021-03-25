@@ -42,11 +42,11 @@
 (s/def ::pic-images-create-model ::image-files)
 
 (s/def ::pic-create-model
-  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title]
+  (s/keys :req-un [::users-domain/user-id ::image-urls ::title]
           :opt-un [::description]))
 
 (s/def ::pic-model
-  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title ::base-domain/created_at]
+  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title ::base-domain/created-at]
           :opt-un [::description]))
 
 (s/def ::pics-model

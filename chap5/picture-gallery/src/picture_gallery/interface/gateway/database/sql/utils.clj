@@ -57,7 +57,7 @@
     (:next.jdbc/update-count (njs/delete! conn table-key idm))))
 
 (defn logical-delete! [spec table-key idm]
-  (update! spec table-key {:is_deleted true} idm))
+  (update! spec table-key {:is_deleted true :updated_at (sql-now)} idm))
 
 (defn find-by-m [spec table-key m]
   (with-open [conn (jdbc/get-connection (:datasource spec))]
