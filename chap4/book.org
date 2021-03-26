@@ -258,6 +258,7 @@ client                                server
             [picture-gallery.domain.error :as error-domain]
             [picture-gallery.domain.base :as base-domain]))
 
+;; model
 (s/def ::encrypted-id-token string?)
 
 ;; ここは usecase の in-out にまつわるモデルの話
@@ -275,7 +276,7 @@ client                                server
 
 ;; ここは interface の encrypyed-id-token デコード周りの話
 (s/def ::decode-id-token-succeed
-  (s/tuple ::base-domain/success ::users-domain/id-token))
+  (s/tuple ::base-domain/success (s/keys :req-un [::users-domain/id-token])))
 
 (s/def ::decode-id-token-failed
   (s/tuple ::base-domain/failure ::error-domain/error))

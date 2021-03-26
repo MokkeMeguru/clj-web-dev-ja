@@ -22,7 +22,7 @@
 
 ;; interface
 (s/def ::decode-id-token-succeed
-  (s/tuple ::base-domain/success ::users-domain/id-token))
+  (s/tuple ::base-domain/success (s/keys :req-un [::users-domain/id-token])))
 
 (s/def ::decode-id-token-failed
   (s/tuple ::base-domain/failure ::error-domain/error))

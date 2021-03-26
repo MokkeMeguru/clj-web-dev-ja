@@ -35,5 +35,5 @@
 ;;                                   :host "dev_db"})
 ;;    :migrations (jdbc/load-resources "migrations")})
 
-;; (repl/migrate config)
-;; (repl/rollback config 1)
+;;  (repl/migrate config)
+;;  (repl/rollback config 1)

@@ -5,12 +5,14 @@
             [picture-gallery.domain.error :as error-domain]
             [picture-gallery.interface.gateway.database.users-repository :as users-repository]
             [picture-gallery.interface.gateway.auth.auth-service :as auth-service]
-            [picture-gallery.domain.users :as users-domain]))
+            [picture-gallery.domain.users :as users-domain]
+            [integrant.core :as ig]))
 
 (s/fdef signup
-  :args (s/cat :input-model ::auth-domain/signup-input
-               :db ::users-repository/users-repository
-               :auth ::auth-service/auth-service)
+  :args (s/cat
+         :db ::users-repository/users-repository
+         :auth ::auth-service/auth-service
+         :input-model ::auth-domain/signup-input)
   :ret (s/or :success (s/tuple ::auth-domain/signin-output nil?)
              :failure (s/tuple nil? ::error-domain/error)))
 
@@ -81,3 +83,19 @@
    give-new-user-id
    create-new-user
    ->output-model))
+
+;; (def system (ig/init {:picture-gallery.infrastructure.env/env {}
+;;                       :picture-gallery.infrastructure.logger/logger {:env (ig/ref :picture-gallery.infrastructure.env/env)}
+;;                       :picture-gallery.infrastructure.sql.sql/sql {:env (ig/ref :picture-gallery.infrastructure.env/env)
+;;                                                                    :logger (ig/ref :picture-gallery.infrastructure.logger/logger)}
+;;                       :picture-gallery.infrastructure.firebase.core/firebase {:env (ig/ref :picture-gallery.infrastructure.env/env)}}))
+
+;; (def e-id-token
+;;   "eyJhbGciOiJSUzI1NiIsImtpZCI6ImY4NDY2MjEyMTQxMjQ4NzUxOWJiZjhlYWQ4ZGZiYjM3ODYwMjk5ZDciLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiTWVndXJ1IiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hLS9BT2gxNEdoeWhoSDZ6VmdHMnV1Szh0SWRxWXZVcWQ4UG1fM2hHQkpZVDFTMW13PXM5Ni1jIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL3NhbXBsZS1waWN0dXJlLWdhbGxlcnktYzEycmIiLCJhdWQiOiJzYW1wbGUtcGljdHVyZS1nYWxsZXJ5LWMxMnJiIiwiYXV0aF90aW1lIjoxNjE2NzM2NzEwLCJ1c2VyX2lkIjoiTk94ME9BbGNROGFBNW5lREh3Z3dKMXByTWVrMiIsInN1YiI6Ik5PeDBPQWxjUThhQTVuZURId2d3SjFwck1lazIiLCJpYXQiOjE2MTY3MzY3MTIsImV4cCI6MTYxNjc0MDMxMiwiZW1haWwiOiJtZWd1cnUubW9ra2VAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZ29vZ2xlLmNvbSI6WyIxMTAzODc4NjU0NTU0MjA5NDI4MTgiXSwiZW1haWwiOlsibWVndXJ1Lm1va2tlQGdtYWlsLmNvbSJdfSwic2lnbl9pbl9wcm92aWRlciI6Imdvb2dsZS5jb20ifX0.UOL6HLdYkgXfA82dFTMWSK8adWVR70alo621RtDYLcxUCi4pAt1E1mQPBQpbhIFyjo3cSJE13wNvwnCPqUJy66PCPk9ei7EFgOZX2AC_yrfa0YIxT9-mH4UmGMgR29UNcI7CogiCAcE_hr7qATIRb_0ezBWNvj5WCKAjgjhQfO-jGFaJeKZXbvQ5q_2cn8Q2oDDS66Q9yd4e70V2sP6BCYRigTJKIeAf--jMQnCQa2AbTlhbDf-fNxowSXnr7FaTQE4mmWELglxT3uqnHI2qhatfseIgwQeRi1mmYimZpNXpO9CJEZbF9Ky091RbMSW-9SCOdqOa0QsMJH6i0Z-wbA")
+
+;; (signup
+;;  (:picture-gallery.infrastructure.sql.sql/sql system)
+;;  (:picture-gallery.infrastructure.firebase.core/firebase system)
+;;  {:encrypted-id-token e-id-token}
+;;  )
+;; (ig/halt! system)

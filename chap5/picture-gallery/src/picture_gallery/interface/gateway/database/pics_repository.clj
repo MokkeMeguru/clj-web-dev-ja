@@ -86,7 +86,7 @@
 
 ;; (def pic-id
 ;;   (:pic-id (first (get-pics
-;;                    (:picture-gallery.infrastructure.sql.sql/sql system)))))
+;;                   (:picture-gallery.infrastructure.sql.sql/sql system)))))
 ;; (s/valid?
 ;;  ::pics-domain/pics-model
 ;;  (get-pics (:picture-gallery.infrastructure.sql.sql/sql system)))

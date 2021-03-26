@@ -16,6 +16,9 @@
 (defn auth-error [message]
   {:status 500 :body {:code 1001 :message (str "error caused from authorization process : " message)}})
 
+(defn image-db-error [message]
+  {:status 500 :body {:code 1002 :message (str "error caused from image db process : " message)}})
+
 (def expired-id-token {:status 400 :body {:code 1701 :message "the firebase token is expired"}})
 (def invalid-id-token {:status 400 :body {:code 1702 :message "the firebase token is invalid"}})
 (def unknown-id-token {:status 400 :body {:code 1703 :message "the firebase token is something wrong"}})
@@ -28,3 +31,5 @@
 
 (def signin-failed-by-user-not-found
   {:status 400 :body {:code 2101 :message "signin failed because the user has id-token is not found"}})
+
+(def image-delete-failed {:status 500 :body {:code 2200 :message "image delete failed"}})

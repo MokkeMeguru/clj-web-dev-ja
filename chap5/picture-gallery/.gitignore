@@ -11,3 +11,7 @@ pom.xml.asc
 /.prepl-port
 .hgignore
 .hg/
+/dev-image-db/pic/*
+!/dev-image-db/pic/.gitkeep
+/test-image-db/pic/*
+!/test-image-db/pic/.gitkeep
