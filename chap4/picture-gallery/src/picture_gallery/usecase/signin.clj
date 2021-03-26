@@ -7,7 +7,10 @@
             [picture-gallery.interface.gateway.database.users-repository :as users-repository]))
 
 (s/fdef signin
-  :args (s/cat :input-model ::auth-domain/signin-input)
+  :args (s/cat
+         :db ::users-repository/users-repository
+         :auth ::auth-service/auth-service
+         :input-model ::auth-domain/signin-input)
   :ret (s/or :success (s/cat :signin-output ::auth-domain/signin-output :error nil)
              :failure (s/cat :signin-output nil? :error ::error-domain/error)))
 
