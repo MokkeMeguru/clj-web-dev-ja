@@ -63,12 +63,18 @@
 (s/def ::pic-get-input
   (s/keys :req-un [::pic-id]))
 
-(s/def ::pic-get-output
-  (s/keys :req-un [::pics-model]))
+(s/def ::pic-get-output ::pic-model)
 
 (s/def ::pic-delete-input
   (s/keys :req-un [::auth-domain/encrypted-id-token ::pic-id]))
 
+(s/def ::pic-delete-output true?)
+
+(s/def ::pic-image-get-input
+  (s/keys :req-un [::image-url]))
+
+(s/def ::pic-image-get-output
+  (s/keys :req-un [::image-file]))
 
 ;; (s/explain ::title "fuck")
 ;; (s/explain ::title "fucker")

@@ -26,29 +26,9 @@
    [picture-gallery.infrastructure.router.auth :as auth-router]
    [picture-gallery.infrastructure.router.users :as users-router]
    [picture-gallery.infrastructure.router.pics :as pics-router]
-   [picture-gallery.infrastructure.router.images :as images-router]
-   [clojure.spec.alpha :as s]
-   [spec-tools.core :as stc]
-   [spec-tools.swagger.core :as swagger-spec]))
+   [picture-gallery.infrastructure.router.images :as images-router]))
 
-(def temp-file-part
-  (stc/spec {:spec (s/keys :req-un [::filename ::content-type ::tempfile ::size])
-             :swagger/type "file"}))
-(def sample-string
-  (stc/spec
-   {:spec string?
-    :swagger/type "string"}))
-
-(swagger-spec/transform
- (s/* temp-file-part))
-
-(swagger-spec/transform
- (s/* string?))
-
-(swagger-spec/transform
- (s/* sample-string))
-
-(defn app [db auth]
+(defn app [db auth image-db]
   (ring/ring-handler
    (ring/router
     [["/swagger.json"
@@ -67,8 +47,8 @@
       (sample-router/sample-router)
       (auth-router/auth-router db auth)
       (users-router/users-router db auth)
-      (pics-router/pics-router db auth nil)
-      (images-router/images-router db nil)]]
+      (pics-router/pics-router db auth image-db)
+      (images-router/images-router db image-db)]]
 
     {:exception pretty/exception
      :data {:coercion reitit.coercion.spec/coercion
@@ -100,8 +80,9 @@
     (ring/create-default-handler))
    {:middleware [wrap-with-logger]}))
 
-(defmethod ig/init-key ::router [_ {:keys [env db auth]}]
+(defmethod ig/init-key ::router [_ {:keys [env db auth image-db]}]
   (timbre/info "router got: env" env)
   (timbre/info "router got: db" db)
   (timbre/info "router got: auth" auth)
-  (app db auth))
+  (timbre/info "rotuer got: image-db" image-db)
+  (app db auth image-db))

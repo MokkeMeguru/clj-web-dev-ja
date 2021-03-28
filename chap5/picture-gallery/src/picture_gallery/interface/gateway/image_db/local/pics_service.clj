@@ -1,7 +1,8 @@
 (ns picture-gallery.interface.gateway.image-db.local.pics-service
   (:require [picture-gallery.interface.gateway.image-db.pics-service :refer [Pics]]
             [clojure.java.io :as io]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  (:import (javax.imageio ImageIO)))
 
 (extend-protocol Pics
   picture_gallery.infrastructure.image_db.core.LocalImageDBBoundary
@@ -19,7 +20,7 @@
           (cond
             (> retry 10) (throw (ex-info "save pic's image failed: at apply unique random uuid"))
             (and file (.isFile file)) (recur (java.util.UUID/randomUUID) (inc retry))
-            :else (do (io/copy image file)
+            :else (do (ImageIO/write (ImageIO/read image) "png" file)
                       (.toString blob)))))
       (catch java.io.IOException e
         (timbre/error "Pics save image Error: " (.getMessage e))

@@ -588,6 +588,8 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
   :ret (s/or :success (s/tuple ::pics-domain/pic-post-output nil?)
              :failure (s/tuple nil? ::error-domain/error)))
 
+;; この部分は signin と同じ関数を使いまわしています。
+;; 小さな機能で分割することでコードを再利用できるようになり、メンテナンスコストの低下が望めるかもしれません。：
 (defn decode-id-token "
   decode encrypted id-token
   "
@@ -612,6 +614,8 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
 
 
 ;; --- tcc-process -------
+;; 以下が spec の定義です。REPL 経由で 実装と往復し、仕様を決めていきます。
+;; 極力関数の概形を揃えることで、可読性を向上させると良いでしょう (そのためにも沢山仮実装してみて下さい)。
 ;; spec helper
 (s/def ::input-model ::pics-domain/pic-post-input)
 (s/def ::exist-user ::users-domain/user-model)
@@ -625,6 +629,7 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
 (s/def ::tcc-result ::base-domain/tcc-state)
 (s/def ::tcc-status (s/keys :req-un [::tcc-image-process ::tcc-db-process ::tcc-result ::tcc-error]))
 
+;; try
 (s/fdef pic-post-try-phase-save-images
   :args (s/cat :image-files ::pics-domain/image-files
                :image-db ::image-db)
@@ -640,6 +645,7 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
   :args (s/cat :m (s/keys :req-un [::input-model ::exist-user ::db ::image-db]))
   :ret (s/tuple boolean? ::tcc-status))
 
+;; confirm
 (s/fdef pic-post-confirm-phase-save-images
   :args (s/cat :tcc-image-process ::tcc-image-process :image-db ::image-db)
   :ret (s/or :success (s/tuple ::tcc-image-process nil?)
@@ -655,6 +661,7 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
   :ret (s/or :success (s/tuple ::tcc-status nil?)
              :failure (s/tuple nil? ::error-domain/error)))
 
+;; cancel
 (s/fdef pic-post-cancel-phase-remove-images
   :args (s/cat :tcc-image-process ::tcc-image-process :image-db ::image-db)
   :ret (s/or :success (s/tuple ::tcc-image-process nil?)
@@ -669,10 +676,14 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
   :args (s/cat :m (s/keys :req-un [::tcc-status ::db ::image-db]))
   :ret (s/tuple nil? ::error-domain/error))
 
+;; root
 (s/fdef pic-post-tcc
   :args (s/cat :m (s/keys :req-un [::input-model ::exist-user ::db ::image-db]))
   :ret (s/or :success (s/tuple (s/keys :req-un [::tcc-status]) nil?)
              :failure (s/tuple nil? ::error-domain/error)))
+
+;; --------------------------
+;; 以下が実装です。
 ;; try-phase
 (defn pic-post-try-phase-save-images "
  tcc's try-process
@@ -706,7 +717,7 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
     (cond
       err [nil err]
       :else [new-pic-tried nil])))
-2
+
 (defn pic-post-try-phase "
   tcc's try-process
   1. save images ^ generate each image's url
@@ -720,9 +731,6 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
                                                       :exist-user exist-user
                                                       :image-urls image-urls}
                                                      db))]
-    (timbre/info "pic-post tcc try phase result: save-images" image-urls)
-    (timbre/info "pic-post tcc try phase result: save-pic" new-pic)
-    (timbre/info "pic-post tcc try phase result: error" err)
     (if err
       [false {:tcc-image-process image-urls
               :tcc-db-process new-pic
@@ -846,24 +854,24 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
 (defn ->output-model [{:keys [tcc-status]}]
   [{:pic-id (-> tcc-status :tcc-db-process :pic-id)} nil])
 
+;; 大元の関数は、 sigin / signup と同様に err->> マクロでくるという規格を設けています。
 (defn pic-post [db auth image-db input-model]
   (err->>
    {:input-model input-model
     :auth auth
     :db db
     :image-db image-db}
-   decode-id-token
-   get-exist-user-has-id-token
-   pic-post-tcc
-   ->output-model))
+   decode-id-token               ;; encrypted-id-token を decode します。
+   get-exist-user-has-id-token   ;; ユーザ情報を獲得します。
+   pic-post-tcc                  ;; tcc パターンでデータを db、image-db へ保存します。
+   ->output-model))              ;; output のモデルにフォーマットします。
 #+END_SRC
 
 </details>
 
-他実装は signin / signup と同様の記述であり、複雑な内容がないため、紹介を省略します。
+その他の実装は、signin / signup と同様に作られるので、省略します。
 
 * 動作確認
-
 * 付録
 ** Repository 内に Transaction を封じ込める
 Transaction は副作用を伴う関数を ACID に扱いたいときに用います。

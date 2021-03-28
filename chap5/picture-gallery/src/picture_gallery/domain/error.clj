@@ -33,3 +33,6 @@
   {:status 400 :body {:code 2101 :message "signin failed because the user has id-token is not found"}})
 
 (def image-delete-failed {:status 500 :body {:code 2200 :message "image delete failed"}})
+
+(def pic-delete-failed-by-user-is-invalid {:status 400 :body {:code 2300 :message "this user cannot delete this pic because of user permission deneid"}})
+(def pic-delete-failed-by-unknown-reason {:status 400 :body {:code 2301 :message "this pic cannot delete because of unknown reason"}})

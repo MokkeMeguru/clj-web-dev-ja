@@ -25,10 +25,12 @@
 (s/def ::image-id string?)
 (s/def ::image-url string?)
 (s/def ::image-urls (s/coll-of ::image-url))
-(s/def ::created_at pos-int?)
+(s/def ::created-at pos-int?)
 
 (s/def ::user-pic
-  (s/keys :req-un [::id ::title ::created_at ::image-url]))
+  (s/keys :req-un [::id ::title ::created_at ::image-urls] :opt-un [::description]))
+
+(s/def ::user-pics (s/coll-of ::user-pic))
 
 (def pics-post-parameters-multipart
   {:images [reitit-multipart/temp-file-part]
@@ -42,7 +44,8 @@
   (s/keys :req-un [::id]))
 
 (s/def ::pic-get-response
-  (s/keys :req-un [::id ::user-id ::title ::image-urls ::created_at] :opt-un [::description]))
+  (s/keys :req-un [::id ::user-id ::title ::image-urls ::created-at] :opt-un [::description]))
 
-(s/def ::user-pics-get-response
-  (s/coll-of ::user-pic))
+(s/def ::user-pics-get-response ::user-pics)
+
+(s/def ::pic-image-get-response reitit-multipart/temp-file-part)
