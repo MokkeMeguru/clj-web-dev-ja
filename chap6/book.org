@@ -1,0 +1,91 @@
+#+options: ':t *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
+#+options: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
+#+options: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
+#+options: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
+#+title: Clojure x ClojureScript で深める Web 開発 (6) ~クライアントサイドと re-frame~
+#+date: <2021-03-08 Mon>
+#+author: MokkeMeguru
+#+email: meguru.mokke@gmail.com
+#+language: en
+#+select_tags: export
+#+exclude_tags: noexport
+#+creator: Emacs 27.1 (Org mode 9.4)
+
+長いサーバサイドの実装は一旦終了とし、ここからはクライアントサイドの実装を行います。
+
+クライアントサイドの実装では、re-frame (https://github.com/day8/re-frame) という ClojureScript x React x Redux (のようなもの) な開発を支援するフレームワークを利用します。
+サーバサイドと同様に、Clean Architecture で仕上げることもできますが、クライアントサイドに Clean Architecture が必要とされるようなデータ操作を行わせるケースを想定しないために、フレームワークを用いることを選択しました。
+
+* re-frame と DDD、関数型プログラミング
+re-frame で重要となるアイテムは、 *db* *subs(subscribers)* *events* *views* の4つです。
+
+簡単のために図示すると、それぞれのアイテムは下記のような役割を担っています。
+
+#+ATTR_ORG: :width 500
+[[./img/re-frame-cycle.png]]
+
+重要なのは、中央のサイクル部です。
+データモデル (DB) と HTML (Views) とのやり取りを、 *events* 、 *subs* のそれぞれが *単方向ずつ* 担っているのが確認できます。
+この単方向のベクトルが re-frame 特徴である、データの流れを追いやすく、検証が行いやすい理由の一つになっています。
+
+参考
+- https://qiita.com/lagenorhynque/items/3770e520bee0007e417c
+
+** re-frame と DDD
+上記のサイクルを達成するためには、いくつかあったほうが良い性質があります。
+
+一つは、DB と Views で扱うコンテンツが共通である、という性質です。
+言い換えれば、ドメインごとに *db* *events* *subs* *views* が整備されていたほうが良い、ということになります。
+実際に、 re-frame のプロジェクトのディレクトリ構造は次のようになることが推奨されています。
+
+#+begin_example
+project
+     |- content_A
+     |        |- db.cljs
+     |        |- events.cljs
+     |        |- subs.cljs
+     |        `- views.cljs
+     |- content_B
+     |        |- db.cljs
+     |        |- events.cljs
+     |        |- subs.cljs
+     |        `- views.cljs
+     |- ...
+#+end_example
+
+これはまさに ドメイン駆動のディレクトリ構造に近いものです。
+また、HTML を考えれば、1画面1コンテンツを半ば強制的に実現させることになります (勿論組み合わせることもできます)。
+
+** re-frame と関数型プログラミング
+当然のことながら、re-frame は ClojureScript で記述されるフレームワークです。
+そして、ClojureScript は、Clojure の JavaScript サポート版のような立ち位置で、関数型言語の一つと言えます。
+
+関数型言語の多くは、副作用という言葉に敏感です。
+副作用というのは、例えば db を書き換えたり、HTML にデータを入力したり、API を叩いて出力を受け取ったり、といった、データの入出力やデータを不可逆的に操作することを指します。
+
+re-frame では、 *views* と *db* 、 *subs* では (基本的に) 副作用のある処理を書きません。
+この性質のために、 re-frame は他の JavaScript (や TypeScript) のフレームワークに比べてもテストの実装が容易です (副作用がない部分は入力と出力の関係が明らか)。
+
+ただし、 re-frame はこの性質のために、ゴリゴリのアニメーション処理が必要がコードなどはあまり得意では (そもそも React 自体が brabra ...) ないです。
+
+* プロジェクトのセットアップ
+
+re-frame はフレームワークなので、アプリのセットアップにテンプレートを使うことができます。
+
+次のオプションをつけてプロジェクトを初期化します。
+
+#+BEGIN_SRC shell
+lein new re-frame pic-gallery-web +garden +10x +cider +test
+#+END_SRC
+
+~+xxx~ はオプションを表しています。今回追加したオプションは、次のとおりです。
+
+- garden: clojure で css を書くライブラリの追加
+- 10x: デバッグツールの追加
+- cider: emacs での開発支援ツールの追加
+- test: テストのテンプレートの追加
+
+参考:
+- https://github.com/day8/re-frame-template
+
+*
