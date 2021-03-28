@@ -1,4 +1,4 @@
-##+options: ':t *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
+#+options: ':t *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
 #+options: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
 #+options: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
 #+options: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
@@ -12,13 +12,14 @@
 #+creator: Emacs 27.1 (Org mode 9.4)
 
 +安心して下さい。長い戦いは終わったので、後は消化試合です+
-本稿では、画像を投稿し、最近の数件を閲覧することができる簡易サービスを想定し、以前までに作ったAuthと組み合わせた API 開発を進めていきます。
 
-また、本稿では最も実装に難儀するトランザクションの処理を Repository 内に封じ込める / TCC (try-confirm/catch) を用いることで解決します [[Repository 内に Transaction を封じ込める]]。
+本稿では、画像を投稿し、閲覧することができる簡易サービスを想定し、以前までに作ったAuthと組み合わせた API 開発を進めていきます。
+
+また、本稿では実装に難儀するトランザクションの処理を Repository 内に封じ込める / TCC (try-confirm/catch) を用いる手法で解決し [[Repository 内に Transaction を封じ込める]] 、実例として紹介します。
 
 * 画像をローカルに保存する
 本ガイドでは、画像をローカルに保存します。
-一般には、GCS などの外部ストレージを利用することが多いのですが、連携に関する話をまとめるには紙面と時間が足りないので (もう2万年くらい使っていますね)、 ローカルに保存、というシンプルな方法を利用します。
+一般には、GCS などの外部ストレージを利用することが多いのですが、連携に関する話をまとめるには紙面と時間が足りないので、 ローカルに保存、というシンプルな方法を利用します。
 
 Clojure で画像ファイルを保存する方法は、 ~javax.imageio.ImageIO/write~ 関数を用いることです。
 名前空間からして Java の機能を使っていますが、実際そのとおりです。
@@ -89,7 +90,7 @@ base-URL は、 ~/api/pics~ とします。
 ** user's image list
 ユーザで絞り込んだ画像のリスト、と解釈し、 base-URL を ~/api/users/<user-id>/pics~ とします。
 *** get
-簡単のために、pagination を offset 法で実装することを前提に request query を組み立てています。 offset 法は、投稿系の REST において検索速度上推奨できるものではないのですが、実装が非常に容易です。
+簡単のために、pagination を offset 法で実装することを前提に request query を組み立てています。
 - request (query)
   #+BEGIN_SRC json
 {
@@ -98,14 +99,14 @@ base-URL は、 ~/api/pics~ とします。
   #+END_SRC
 - response
   ~description~ は長い文字列を想定しており、 list 表示では必要としていないので省略します。
-  ~image-url~ はリスト表示の際に pic 内の1枚画像のみ参照する仕様を想定し、 ~image-urls[0]~ とします。
+  ~image-urls~ についても、(現状では) 一枚の ~image-url~ のみを返すようにします。
     #+BEGIN_SRC json
 [
     {
         "id": "<id>",
         "title": "<title>",
         "created_at": "<created_at as long number>",
-        "image-url": "<image-url>"
+        "image-urls": ["<image-url>"]
     },
 ]
     #+END_SRC
@@ -122,9 +123,17 @@ base-URL は、 ~/api/pics~ とします。
             [picture-gallery.domain.auth :as auth-domain])
   (:import javax.imageio.ImageIO))
 
+;; 不適切名のはじき出し
 (def invalid-title-substrs
   ["fuck"])
 
+(defn acceptable-title? [title]
+  (apply
+   = false
+   (mapv (partial clojure.string/includes? title)
+         invalid-title-substrs)))
+
+;; 画像ファイルかどうかのチェック
 (defn image-file? [image-file]
   (and (instance? java.io.File image-file)
        (some? (ImageIO/read image-file))))
@@ -135,12 +144,6 @@ base-URL は、 ~/api/pics~ とします。
 (def max-description-length 1024)
 (def max-images-per-one-pic 3)
 
-(defn acceptable-title? [title]
-  (apply
-   = false
-   (mapv (partial clojure.string/includes? title)
-         invalid-title-substrs)))
-
 (s/def ::pic-id uuid?)
 (s/def ::image-file image-file?)
 (s/def ::title (s/and string?
@@ -149,25 +152,25 @@ base-URL は、 ~/api/pics~ とします。
 (s/def ::description (s/and string?
                             #(< min-description-length (count %) max-description-length)))
 
-(s/def ::image-url string?)
+(s/def ::image-url  string?)
 (s/def ::image-files (s/coll-of ::image-file :min-count 1 :max-count max-images-per-one-pic))
 (s/def ::image-urls (s/coll-of ::image-url :min-count 1 :max-count max-images-per-one-pic))
 
 ;; model
-
+(s/def ::pic-images-create-model ::image-files)
 
 (s/def ::pic-create-model
-  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-files ::title]
+  (s/keys :req-un [::users-domain/user-id ::image-urls ::title]
           :opt-un [::description]))
 
 (s/def ::pic-model
-  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title ::base-domain/created_at]
+  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title ::base-domain/created-at]
           :opt-un [::description]))
 
 (s/def ::pics-model
   (s/coll-of ::pic-model))
 
-;; usecase
+;; usecase 内の出入り部分の型
 (s/def ::pic-post-input
   (s/keys :req-un [::auth-domain/encrypted-id-token ::image-files ::title]
           :opt-un [::description]))
@@ -178,27 +181,22 @@ base-URL は、 ~/api/pics~ とします。
 (s/def ::pic-get-input
   (s/keys :req-un [::pic-id]))
 
-(s/def ::pic-get-output
-  (s/keys :req-un [::pics-model]))
+(s/def ::pic-get-output ::pic-model)
 
 (s/def ::pic-delete-input
   (s/keys :req-un [::auth-domain/encrypted-id-token ::pic-id]))
-#+END_SRC
 
-#+BEGIN_SRC clojure
-(ns picture-gallery.domain.user-pics
-  (:require [picture-gallery.domain.users :as users-domain]
-            [picture-gallery.domain.pics :as pics-domain]
-            [clojure.spec.alpha :as s]))
-;; usecase
-(s/def ::user-pics-get-input
-  (s/keys :req-un [::users-domain/user-id]))
+(s/def ::pic-delete-output true?)
 
-(s/def ::user-pics-get-output
-  (s/keys :req-un [::pics-domain/pics-model]))
+(s/def ::pic-image-get-input
+  (s/keys :req-un [::image-url]))
+
+(s/def ::pic-image-get-output
+  (s/keys :req-un [::image-file]))
 #+END_SRC
 ** ハンドラ
-image-db はこのあと実装する、画像を保存する infrastructure (予定) です。
+ベースのハンドラは ~/api/pics~ 以下に切り出します。
+
 #+BEGIN_SRC clojure
 (ns picture-gallery.infrastructure.router.pics
   (:require [picture-gallery.domain.openapi.pics :as pics-openapi]))
@@ -231,7 +229,7 @@ image-db はこのあと実装する、画像を保存する infrastructure (予
                            :body {}})}}]]])
 #+END_SRC
 
-ユーザの中にある pics という認識に立つと、 ~users~ namespace のほうが自然かもしれません。
+ユーザの中にある pics という認識に立ち、 ~users~ namespace へ切り出しました。
 #+BEGIN_SRC clojure
 (ns picture-gallery.infrastructure.router.users
   (:require [picture-gallery.domain.openapi.pics :as pics-openapi]
@@ -356,7 +354,8 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
 (ns picture-gallery.interface.gateway.image-db.local.pics-service
   (:require [picture-gallery.interface.gateway.image-db.pics-service :refer [Pics]]
             [clojure.java.io :as io]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  (:import (javax.imageio ImageIO)))
 
 (extend-protocol Pics
   picture_gallery.infrastructure.image_db.core.LocalImageDBBoundary
@@ -374,7 +373,7 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
           (cond
             (> retry 10) (throw (ex-info "save pic's image failed: at apply unique random uuid"))
             (and file (.isFile file)) (recur (java.util.UUID/randomUUID) (inc retry))
-            :else (do (io/copy image file)
+            :else (do (ImageIO/write (ImageIO/read image) "png" file)
                       (.toString blob)))))
       (catch java.io.IOException e
         (timbre/error "Pics save image Error: " (.getMessage e))
@@ -540,6 +539,7 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
       (sql-utils/logical-delete! spec :pics {:id pic-id})
       (sql-utils/physical-delete! spec :pics {:id pic-id}))))
 #+END_SRC
+
 </details>
 * interface の組み込み
 usecase 層に interface を組み込んでいきます。
@@ -854,7 +854,7 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
 (defn ->output-model [{:keys [tcc-status]}]
   [{:pic-id (-> tcc-status :tcc-db-process :pic-id)} nil])
 
-;; 大元の関数は、 sigin / signup と同様に err->> マクロでくるという規格を設けています。
+;; 大元の関数は、 sigin / signup と同様に err->> マクロでくくるという規格を設けています。
 (defn pic-post [db auth image-db input-model]
   (err->>
    {:input-model input-model
@@ -872,6 +872,20 @@ Clojure において、 (エラー処理を省いて) 処理が一本筋であ�
 その他の実装は、signin / signup と同様に作られるので、省略します。
 
 * 動作確認
+Swagger を用いて動作確認をします。
+
+- post
+    #+ATTR_ORG: :width 500
+    [[./img/post_pic.png]]
+
+- get list
+    #+ATTR_ORG: :width 500
+    [[./img/get_list_pics.png]]
+
+- get image
+    #+ATTR_ORG: :width 500
+    [[./img/get_image.png]]
+
 * 付録
 ** Repository 内に Transaction を封じ込める
 Transaction は副作用を伴う関数を ACID に扱いたいときに用います。

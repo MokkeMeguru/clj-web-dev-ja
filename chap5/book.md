@@ -1,36 +1,36 @@
-- [画像をローカルに保存する](#orgb536bb5)
-- [画像の REST のフロー確認](#org75977bf)
-  - [post](#org773e138)
-  - [get](#org22f52d7)
-  - [update](#org4080fac)
-  - [delete](#org79567d4)
-  - [user&rsquo;s image list](#org97c8069)
-    - [get](#org4e46ae4)
-- [ドメイン・ハンドラの作成](#org22a6133)
-  - [ドメイン](#org6c9d42d)
-  - [ハンドラ](#org9323f41)
-- [infrastructure の実装](#orge4167e0)
-- [interface の実装](#org2d5ba3a)
-  - [画像を保存するための interface](#orgedda8b0)
-  - [Pic 情報を保存するための SQL interface](#org2bc289e)
-- [interface の組み込み](#orge9a80d8)
-- [動作確認](#org95c1c42)
-- [付録](#org977b16d)
-  - [Repository 内に Transaction を封じ込める](#orga38ef62)
-    - [同一 サービス 内での Transaction](#org9b17d67)
-    - [複数サービスをまたいだ Transaction](#orgee393f2)
+- [画像をローカルに保存する](#org3931e49)
+- [画像の REST のフロー確認](#orgb17ef8b)
+  - [post](#org41e3185)
+  - [get](#orgd11e09f)
+  - [update](#org2a6a62f)
+  - [delete](#org45255b1)
+  - [user&rsquo;s image list](#org044e511)
+    - [get](#org1274ae3)
+- [ドメイン・ハンドラの作成](#orga8ca3a1)
+  - [ドメイン](#org4a7b869)
+  - [ハンドラ](#org762f6b1)
+- [infrastructure の実装](#org5de0570)
+- [interface の実装](#orgc9ddaf2)
+  - [画像を保存するための interface](#orgf7f5174)
+  - [Pic 情報を保存するための SQL interface](#org97ae223)
+- [interface の組み込み](#org483db03)
+- [動作確認](#orgdb40875)
+- [付録](#orgabd7c30)
+  - [Repository 内に Transaction を封じ込める](#orgdc4fcba)
+    - [同一 サービス 内での Transaction](#org9fb6020)
+    - [複数サービスをまたいだ Transaction](#orgcb0627d)
 
-\##+options: &rsquo;:t \*:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
+~~安心して下さい。長い戦いは終わったので、後は消化試合です~~
 
-~~安心して下さい。長い戦いは終わったので、後は消化試合です~~ 本稿では、画像を投稿し、最近の数件を閲覧することができる簡易サービスを想定し、以前までに作った Auth と組み合わせた API 開発を進めていきます。
+本稿では、画像を投稿し、閲覧することができる簡易サービスを想定し、以前までに作った Auth と組み合わせた API 開発を進めていきます。
 
-また、本稿では最も実装に難儀するトランザクションの処理を Repository 内に封じ込める / TCC (try-confirm/catch) を用いることで解決します [8.1](#orga38ef62)。
+また、本稿では実装に難儀するトランザクションの処理を Repository 内に封じ込める / TCC (try-confirm/catch) を用いる手法で解決し [8.1](#orgdc4fcba) 、実例として紹介します。
 
-<a id="orgb536bb5"></a>
+<a id="org3931e49"></a>
 
 # 画像をローカルに保存する
 
-本ガイドでは、画像をローカルに保存します。 一般には、GCS などの外部ストレージを利用することが多いのですが、連携に関する話をまとめるには紙面と時間が足りないので (もう 2 万年くらい使っていますね)、 ローカルに保存、というシンプルな方法を利用します。
+本ガイドでは、画像をローカルに保存します。 一般には、GCS などの外部ストレージを利用することが多いのですが、連携に関する話をまとめるには紙面と時間が足りないので、 ローカルに保存、というシンプルな方法を利用します。
 
 Clojure で画像ファイルを保存する方法は、 `javax.imageio.ImageIO/write` 関数を用いることです。 名前空間からして Java の機能を使っていますが、実際そのとおりです。 このように優秀な Java のドキュメント付きライブラリを使える点が Clojure の強みの一つです。
 
@@ -46,13 +46,13 @@ Clojure で画像ファイルを保存する方法は、 `javax.imageio.ImageIO/
 ;;       IOException              ... write error
 ```
 
-<a id="org75977bf"></a>
+<a id="orgb17ef8b"></a>
 
 # 画像の REST のフロー確認
 
 base-URL は、 `/api/pics` とします。 なお、post / delete については header に認証情報が付与されているものとします。
 
-<a id="org773e138"></a>
+<a id="org41e3185"></a>
 
 ## post
 
@@ -76,7 +76,7 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
   }
   ```
 
-<a id="org22f52d7"></a>
+<a id="orgd11e09f"></a>
 
 ## get
 
@@ -101,13 +101,13 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
   }
   ```
 
-<a id="org4080fac"></a>
+<a id="org2a6a62f"></a>
 
 ## update
 
 今回は実装しません。
 
-<a id="org79567d4"></a>
+<a id="org45255b1"></a>
 
 ## delete
 
@@ -121,17 +121,17 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
 
 - response なし、成功であれば `204`
 
-<a id="org97c8069"></a>
+<a id="org044e511"></a>
 
 ## user&rsquo;s image list
 
 ユーザで絞り込んだ画像のリスト、と解釈し、 base-URL を `/api/users/<user-id>/pics` とします。
 
-<a id="org4e46ae4"></a>
+<a id="org1274ae3"></a>
 
 ### get
 
-簡単のために、pagination を offset 法で実装することを前提に request query を組み立てています。 offset 法は、投稿系の REST において検索速度上推奨できるものではないのですが、実装が非常に容易です。
+簡単のために、pagination を offset 法で実装することを前提に request query を組み立てています。
 
 - request (query)
 
@@ -141,7 +141,7 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
   }
   ```
 
-- response `description` は長い文字列を想定しており、 list 表示では必要としていないので省略します。 `image-url` はリスト表示の際に pic 内の 1 枚画像のみ参照する仕様を想定し、 `image-urls[0]` とします。
+- response `description` は長い文字列を想定しており、 list 表示では必要としていないので省略します。 `image-urls` についても、(現状では) 一枚の `image-url` のみを返すようにします。
 
   ```json
   [
@@ -149,16 +149,16 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
       "id": "<id>",
       "title": "<title>",
       "created_at": "<created_at as long number>",
-      "image-url": "<image-url>"
+      "image-urls": ["<image-url>"]
     }
   ]
   ```
 
-<a id="org22a6133"></a>
+<a id="orga8ca3a1"></a>
 
 # ドメイン・ハンドラの作成
 
-<a id="org6c9d42d"></a>
+<a id="org4a7b869"></a>
 
 ## ドメイン
 
@@ -172,9 +172,17 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
             [picture-gallery.domain.auth :as auth-domain])
   (:import javax.imageio.ImageIO))
 
+;; 不適切名のはじき出し
 (def invalid-title-substrs
   ["fuck"])
 
+(defn acceptable-title? [title]
+  (apply
+   = false
+   (mapv (partial clojure.string/includes? title)
+         invalid-title-substrs)))
+
+;; 画像ファイルかどうかのチェック
 (defn image-file? [image-file]
   (and (instance? java.io.File image-file)
        (some? (ImageIO/read image-file))))
@@ -185,12 +193,6 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
 (def max-description-length 1024)
 (def max-images-per-one-pic 3)
 
-(defn acceptable-title? [title]
-  (apply
-   = false
-   (mapv (partial clojure.string/includes? title)
-         invalid-title-substrs)))
-
 (s/def ::pic-id uuid?)
 (s/def ::image-file image-file?)
 (s/def ::title (s/and string?
@@ -199,25 +201,25 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
 (s/def ::description (s/and string?
                             #(< min-description-length (count %) max-description-length)))
 
-(s/def ::image-url string?)
+(s/def ::image-url  string?)
 (s/def ::image-files (s/coll-of ::image-file :min-count 1 :max-count max-images-per-one-pic))
 (s/def ::image-urls (s/coll-of ::image-url :min-count 1 :max-count max-images-per-one-pic))
 
 ;; model
-
+(s/def ::pic-images-create-model ::image-files)
 
 (s/def ::pic-create-model
-  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-files ::title]
+  (s/keys :req-un [::users-domain/user-id ::image-urls ::title]
           :opt-un [::description]))
 
 (s/def ::pic-model
-  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title ::base-domain/created_at]
+  (s/keys :req-un [::users-domain/user-id ::pic-id ::image-urls ::title ::base-domain/created-at]
           :opt-un [::description]))
 
 (s/def ::pics-model
   (s/coll-of ::pic-model))
 
-;; usecase
+;; usecase 内の出入り部分の型
 (s/def ::pic-post-input
   (s/keys :req-un [::auth-domain/encrypted-id-token ::image-files ::title]
           :opt-un [::description]))
@@ -228,31 +230,25 @@ base-URL は、 `/api/pics` とします。 なお、post / delete について�
 (s/def ::pic-get-input
   (s/keys :req-un [::pic-id]))
 
-(s/def ::pic-get-output
-  (s/keys :req-un [::pics-model]))
+(s/def ::pic-get-output ::pic-model)
 
 (s/def ::pic-delete-input
   (s/keys :req-un [::auth-domain/encrypted-id-token ::pic-id]))
+
+(s/def ::pic-delete-output true?)
+
+(s/def ::pic-image-get-input
+  (s/keys :req-un [::image-url]))
+
+(s/def ::pic-image-get-output
+  (s/keys :req-un [::image-file]))
 ```
 
-```clojure
-(ns picture-gallery.domain.user-pics
-  (:require [picture-gallery.domain.users :as users-domain]
-            [picture-gallery.domain.pics :as pics-domain]
-            [clojure.spec.alpha :as s]))
-;; usecase
-(s/def ::user-pics-get-input
-  (s/keys :req-un [::users-domain/user-id]))
-
-(s/def ::user-pics-get-output
-  (s/keys :req-un [::pics-domain/pics-model]))
-```
-
-<a id="org9323f41"></a>
+<a id="org762f6b1"></a>
 
 ## ハンドラ
 
-image-db はこのあと実装する、画像を保存する infrastructure (予定) です。
+ベースのハンドラは `/api/pics` 以下に切り出します。
 
 ```clojure
 (ns picture-gallery.infrastructure.router.pics
@@ -286,7 +282,7 @@ image-db はこのあと実装する、画像を保存する infrastructure (予
                            :body {}})}}]]])
 ```
 
-ユーザの中にある pics という認識に立つと、 `users` namespace のほうが自然かもしれません。
+ユーザの中にある pics という認識に立ち、 `users` namespace へ切り出しました。
 
 ```clojure
 (ns picture-gallery.infrastructure.router.users
@@ -329,7 +325,7 @@ image-db はこのあと実装する、画像を保存する infrastructure (予
 
 ![img](./img/swagger-overview.png)
 
-<a id="orge4167e0"></a>
+<a id="org5de0570"></a>
 
 # infrastructure の実装
 
@@ -369,13 +365,13 @@ infrastructure を書いたので、config を編集します。
 
 `env.clj` `profiles.clj` についても、以前と同様に編集します。
 
-<a id="org2d5ba3a"></a>
+<a id="orgc9ddaf2"></a>
 
 # interface の実装
 
 interface も前回と同様に、 `defprotcol` を書いて、実装を書くだけです。
 
-<a id="orgedda8b0"></a>
+<a id="orgf7f5174"></a>
 
 ## 画像を保存するための interface
 
@@ -422,7 +418,8 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
 (ns picture-gallery.interface.gateway.image-db.local.pics-service
   (:require [picture-gallery.interface.gateway.image-db.pics-service :refer [Pics]]
             [clojure.java.io :as io]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  (:import (javax.imageio ImageIO)))
 
 (extend-protocol Pics
   picture_gallery.infrastructure.image_db.core.LocalImageDBBoundary
@@ -440,7 +437,7 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
           (cond
             (> retry 10) (throw (ex-info "save pic's image failed: at apply unique random uuid"))
             (and file (.isFile file)) (recur (java.util.UUID/randomUUID) (inc retry))
-            :else (do (io/copy image file)
+            :else (do (ImageIO/write (ImageIO/read image) "png" file)
                       (.toString blob)))))
       (catch java.io.IOException e
         (timbre/error "Pics save image Error: " (.getMessage e))
@@ -455,7 +452,7 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
 
 </details>
 
-<a id="org2bc289e"></a>
+<a id="org97ae223"></a>
 
 ## Pic 情報を保存するための SQL interface
 
@@ -613,7 +610,7 @@ protocol は次の通り。保存、取得、削除のみの小さい interface 
 
 </details>
 
-<a id="orge9a80d8"></a>
+<a id="org483db03"></a>
 
 # interface の組み込み
 
@@ -623,21 +620,353 @@ usecase 層に interface を組み込んでいきます。 一番問題となる
 
 ![img](./img/pic_tcc_flow.png)
 
-<a id="org95c1c42"></a>
+Clojure において、 (エラー処理を省いて) 処理が一本筋であると、かなり綺麗な (ref: 前回の signin の usecase ) 実装ができます。 しかし、今回は枝分かれのある処理を行った後、集約する必要が見えています。
+
+そのため、本ガイドでは、この TCC 処理の部分を取り出すことで、一本筋に見えるよう関数の実装を工夫しています。
+
+結果として実装がかなり長くなったため、内部関数の TCC 処理部分について、 spec を書いて、仕様を明らかにしています。 このように複雑な関数を実装する必要性に迫られた際には、REPL で動作を確認しながら、 spec を用いて、 **どのような関数を実装するのか削り出せる点** が、Clojure の強みの一つです (と思っています)。
+
+<details><summary> 実装 (300 line +) </summary>
+
+```clojure
+(ns picture-gallery.usecase.pic-post
+  (:require [clojure.spec.alpha :as s]
+            [picture-gallery.domain.pics :as pics-domain]
+            [picture-gallery.utils.error :refer [err->> border-error]]
+            [picture-gallery.interface.gateway.database.pics-repository :as pics-repository]
+            [picture-gallery.interface.gateway.image-db.pics-service :as pics-service]
+            [orchestra.spec.test :as st]
+            [clojure.java.io :as io]
+            [picture-gallery.domain.error :as error-domain]
+            [taoensso.timbre :as timbre]
+            [picture-gallery.interface.gateway.auth.auth-service :as auth-service]
+            [picture-gallery.interface.gateway.database.users-repository :as users-repository]
+            [integrant.core :as ig]
+            [picture-gallery.domain.users :as users-domain]
+            [picture-gallery.domain.base :as base-domain]))
+
+(s/fdef pic-post
+  :args (s/cat :db (s/and ::users-repository/users-repository
+                          ::pics-repository/pics-repository)
+               :auth ::auth-service/auth-service
+               :image-db ::pics-service/pics-service
+               :input-model ::pics-domain/pic-post-input)
+
+  :ret (s/or :success (s/tuple ::pics-domain/pic-post-output nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+;; この部分は signin と同じ関数を使いまわしています。
+;; 小さな機能で分割することでコードを再利用できるようになり、メンテナンスコストの低下が望めるかもしれません。：
+(defn decode-id-token "
+  decode encrypted id-token
+  "
+  [{:keys [input-model auth] :as m}]
+  (let [[[status body] err] (border-error {:function #(auth-service/decode-id-token auth (:encrypted-id-token input-model))
+                                           :error-wrapper error-domain/auth-error})]
+    (cond
+      err [nil err]
+      (= :failure status) [nil body]
+      :else [(assoc m :id-token (:id-token body)) nil])))
+
+(defn get-exist-user-has-id-token "
+  get active (not logical deleted) user
+  which has id-token"
+  [{:keys [id-token db] :as m}]
+  (let [[active-user err] (border-error {:function #(users-repository/get-exist-user-by-auth-token db id-token)
+                                         :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      (empty? active-user) [nil error-domain/signin-failed-by-user-not-found]
+      :else [(assoc m :exist-user active-user) nil])))
+
+
+;; --- tcc-process -------
+;; 以下が spec の定義です。REPL 経由で 実装と往復し、仕様を決めていきます。
+;; 極力関数の概形を揃えることで、可読性を向上させると良いでしょう (そのためにも沢山仮実装してみて下さい)。
+;; spec helper
+(s/def ::input-model ::pics-domain/pic-post-input)
+(s/def ::exist-user ::users-domain/user-model)
+(s/def ::db (s/and ::pics-repository/pics-repository
+                   ::users-repository/users-repository))
+(s/def ::image-db ::pics-service/pics-service)
+
+(s/def ::tcc-image-process (s/or :success ::pics-domain/image-urls :failure nil?))
+(s/def ::tcc-db-process (s/or :success ::pics-domain/pic-model :failure nil?))
+(s/def ::tcc-error (s/or ::no-error nil? ::error ::error-domain/error))
+(s/def ::tcc-result ::base-domain/tcc-state)
+(s/def ::tcc-status (s/keys :req-un [::tcc-image-process ::tcc-db-process ::tcc-result ::tcc-error]))
+
+;; try
+(s/fdef pic-post-try-phase-save-images
+  :args (s/cat :image-files ::pics-domain/image-files
+               :image-db ::image-db)
+  :ret (s/or :success (s/tuple ::pics-domain/image-urls nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(s/fdef pic-post-try-phase-save-pic
+  :args (s/cat :m (s/keys :req-un [::input-model ::exist-user ::pics-domain/image-urls]) :db ::db)
+  :ret (s/or :success (s/tuple ::pics-domain/pic-model nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(s/fdef pic-post-try-phase
+  :args (s/cat :m (s/keys :req-un [::input-model ::exist-user ::db ::image-db]))
+  :ret (s/tuple boolean? ::tcc-status))
+
+;; confirm
+(s/fdef pic-post-confirm-phase-save-images
+  :args (s/cat :tcc-image-process ::tcc-image-process :image-db ::image-db)
+  :ret (s/or :success (s/tuple ::tcc-image-process nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(s/fdef pic-post-confirm-phase-save-pic
+  :args (s/cat :tcc-db-process ::tcc-db-process :db ::db)
+  :ret (s/or :success (s/tuple ::tcc-db-process nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(s/fdef pic-post-confirm-phase
+  :args (s/cat :m (s/keys :req-un [::tcc-status ::db ::image-db]))
+  :ret (s/or :success (s/tuple ::tcc-status nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+;; cancel
+(s/fdef pic-post-cancel-phase-remove-images
+  :args (s/cat :tcc-image-process ::tcc-image-process :image-db ::image-db)
+  :ret (s/or :success (s/tuple ::tcc-image-process nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(s/fdef pic-post-cancel-phase-remove-pic-model
+  :args (s/cat :tcc-db-process ::tcc-db-process :db ::db)
+  :ret (s/or :success (s/tuple ::tcc-db-process nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+(s/fdef pic-post-cancel-phase
+  :args (s/cat :m (s/keys :req-un [::tcc-status ::db ::image-db]))
+  :ret (s/tuple nil? ::error-domain/error))
+
+;; root
+(s/fdef pic-post-tcc
+  :args (s/cat :m (s/keys :req-un [::input-model ::exist-user ::db ::image-db]))
+  :ret (s/or :success (s/tuple (s/keys :req-un [::tcc-status]) nil?)
+             :failure (s/tuple nil? ::error-domain/error)))
+
+;; --------------------------
+;; 以下が実装です。
+;; try-phase
+(defn pic-post-try-phase-save-images "
+ tcc's try-process
+  ! 1. save images ^ generate each image's url
+  2. save pic model as tried-model into db
+ "
+  [image-files image-db]
+  (loop [acc-image-files image-files
+         image-urls []]
+    (if (-> acc-image-files count zero?)
+      [image-urls nil]
+      (let [[image-url err]
+            (border-error {:function #(pics-service/save-pic-image image-db (first acc-image-files))
+                           :error-wrapper error-domain/image-db-error})]
+        (cond
+          err [image-urls err]
+          :else (recur (rest acc-image-files) (conj image-urls image-url)))))))
+
+(defn pic-post-try-phase-save-pic "
+  tcc's try-process
+  1. save images ^ generate each image's url
+  ! 2. save pic model as tried-model into db
+  "
+  [{:keys [input-model exist-user image-urls]} db]
+  (let [pic-create-model {:user-id (:user-id exist-user)
+                          :image-urls image-urls
+                          :title (:title input-model)
+                          :description (:description input-model)}
+        [[new-pic-tried _] err] (border-error {:function #(pics-repository/create-pic db pic-create-model :try)
+                                               :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      :else [new-pic-tried nil])))
+
+(defn pic-post-try-phase "
+  tcc's try-process
+  1. save images ^ generate each image's url
+  2. save pic model as tried-model into db
+  "
+  [{:keys [input-model exist-user db image-db]}]
+  (let [[image-urls err] (pic-post-try-phase-save-images (:image-files input-model) image-db)
+        [new-pic err] (if err
+                        [nil err]
+                        (pic-post-try-phase-save-pic {:input-model input-model
+                                                      :exist-user exist-user
+                                                      :image-urls image-urls}
+                                                     db))]
+    (if err
+      [false {:tcc-image-process image-urls
+              :tcc-db-process new-pic
+              :tcc-result :try
+              :tcc-error err}]
+      [true {:tcc-image-process image-urls
+             :tcc-db-process new-pic
+             :tcc-result :try
+             :tcc-error nil}])))
+
+;; confirm-process
+(defn pic-post-confirm-phase-save-images "
+  tcc's confirm-process
+  ! 1. confirm saved images
+  2. save pic model as confirmed-model into db
+  "
+  [tcc-image-process image-db]
+  [tcc-image-process nil])
+
+(defn pic-post-confirm-phase-save-pic "
+  tcc's confirm-process
+  1. confirm saved images
+  ! 2. save pic model as confirmed-model into db
+  "
+  [tcc-db-process db]
+  (let [[_ err] (border-error {:function #(pics-repository/update-pic-state db (:pic-id tcc-db-process) :confirm)
+                               :error-wrapper error-domain/database-error})]
+    (when err
+      (timbre/error "pic-post tcc confirm phase failed at save-pic" tcc-db-process))
+    (cond
+      err [nil err]
+      :else [tcc-db-process nil])))
+
+(defn pic-post-confirm-phase "
+  tcc's confirm-process
+  1. confirm saved images
+  2. save pic model as confirmed-model into db
+  "
+  [{:keys [tcc-status db image-db] :as m}]
+  (let [{:keys [tcc-db-process tcc-image-process]} tcc-status
+        [tcc-image-process err] (pic-post-confirm-phase-save-images tcc-image-process image-db)
+        [tcc-db-process err] (if err [nil err] (pic-post-confirm-phase-save-pic tcc-db-process db))]
+    (cond
+      err [nil err]
+      :else [{:tcc-image-process tcc-image-process
+              :tcc-db-process tcc-db-process
+              :tcc-result :confirm
+              :tcc-error nil} nil])))
+
+;; cancel-process
+(defn pic-post-cancel-phase-remove-images "
+  tcc's cancel-process
+  ! 1. remove images
+  2. set pic model's tcc-state :cancel
+  "
+  [tcc-image-process image-db]
+  (let [delete-image-results
+        (map (fn [image-url]
+               (try (pics-service/delete-pic-image image-db image-url)
+                    (catch Exception e
+                      (timbre/error "pic-post tcc cancel phase failed at remove-image" image-url "cause: " (.getMessage e))
+                      -1))) tcc-image-process)]
+    (if (every? (partial <= 0) delete-image-results)
+      [tcc-image-process nil]
+      [nil error-domain/image-delete-failed])))
+
+(defn pic-post-cancel-phase-remove-pic-model "
+  tcc's cancel-process
+  1. remove images
+  ! 2. set pic model's tcc-state :cancel
+  "
+  [tcc-db-process db]
+  (let [[_ err]
+        (border-error {:function #(pics-repository/update-pic-state db (:pic-id tcc-db-process) :cancel)
+                       :error-wrapper error-domain/database-error})]
+    (cond
+      err [nil err]
+      :else [tcc-db-process  nil])))
+
+(defn pic-post-cancel-phase "
+  tcc's cancel-process
+  1. remove images
+  2. set pic model's tcc-state :cancel
+  "
+  [{:keys [tcc-status db image-db]}]
+  (let [{:keys [db-process image-process]} tcc-status
+        [image-process image-err] (pic-post-cancel-phase-remove-images image-process image-db)
+        [db-process db-err] (pic-post-cancel-phase-remove-pic-model db-process db)]
+    (when image-err
+      (timbre/error "pic-post tcc cancel phase failed at remove-images" image-process))
+    (when db-err
+      (timbre/error "pic-post tcc cancel phase failed at remove-pic-model" db-process))
+    (cond
+      image-err [nil image-err]
+      db-err [nil db-err]
+      :else [nil (-> tcc-status :tcc-error)])))
+
+(defn pic-post-tcc "
+  tcc-process
+  1. try-phase
+     returns [try-success? tcc-status]
+  2-a. confirm-phase if try-success?
+  2-b. cancel-phase if-not try-success?
+  "
+  [{:keys [input-model exist-user db image-db]}]
+  (let [m {:input-model input-model :exist-user exist-user :db db :image-db image-db}
+        [try-success? tcc-status]
+        (pic-post-try-phase m)]
+    (when (:error tcc-status)
+      (timbre/warn "pic-post tcc process error: " (:error tcc-status)
+                   "/db-process: "  (:tcc-db-process tcc-status)
+                   "/image-process: " (:tcc-image-process tcc-status)))
+    (let [[tcc-result err] (if try-success?
+                             (pic-post-confirm-phase (assoc m :tcc-status tcc-status))
+                             (pic-post-cancel-phase (assoc m :tcc-status tcc-status)))]
+      (cond
+        err [nil err]
+        :else [(assoc m :tcc-status tcc-result) nil]))))
+
+;; ----------------
+(defn ->output-model [{:keys [tcc-status]}]
+  [{:pic-id (-> tcc-status :tcc-db-process :pic-id)} nil])
+
+;; 大元の関数は、 sigin / signup と同様に err->> マクロでくくるという規格を設けています。
+(defn pic-post [db auth image-db input-model]
+  (err->>
+   {:input-model input-model
+    :auth auth
+    :db db
+    :image-db image-db}
+   decode-id-token               ;; encrypted-id-token を decode します。
+   get-exist-user-has-id-token   ;; ユーザ情報を獲得します。
+   pic-post-tcc                  ;; tcc パターンでデータを db、image-db へ保存します。
+   ->output-model))              ;; output のモデルにフォーマットします。
+```
+
+</details>
+
+その他の実装は、signin / signup と同様に作られるので、省略します。
+
+<a id="orgdb40875"></a>
 
 # 動作確認
 
-<a id="org977b16d"></a>
+Swagger を用いて動作確認をします。
+
+- post
+
+  ![img](./img/post_pic.png)
+
+- get list
+
+  ![img](./img/get_list_pics.png)
+
+- get image
+
+  ![img](./img/get_image.png)
+
+<a id="orgabd7c30"></a>
 
 # 付録
 
-<a id="orga38ef62"></a>
+<a id="orgdc4fcba"></a>
 
 ## Repository 内に Transaction を封じ込める
 
 Transaction は副作用を伴う関数を ACID に扱いたいときに用います。 ACID の A は原子性 (atomicity) であり、原子をやり取りするのに一つの Repository を使おう、という立場であれば、この主張は正しいと言えます。
 
-<a id="org9b17d67"></a>
+<a id="org9fb6020"></a>
 
 ### 同一 サービス 内での Transaction
 
@@ -661,7 +990,7 @@ Transaction は副作用を伴う関数を ACID に扱いたいときに用い�
 
 ただし弱点として、新しい機能開発をする際に、モデル (= transaction の単位) を見直す必要があります。 言い換えると、 1 を用いることで、モデルが Atomic でなくとも usecase 内部で Atomic な単位を生成することができるので、お手軽に拡張することができます。
 
-<a id="orgee393f2"></a>
+<a id="orgcb0627d"></a>
 
 ### 複数サービスをまたいだ Transaction
 

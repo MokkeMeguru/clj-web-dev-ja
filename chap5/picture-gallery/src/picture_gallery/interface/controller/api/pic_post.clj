@@ -21,4 +21,5 @@
                                input-model)]
     (if (not= ::s/invalid conformed-input-model)
       [conformed-input-model nil]
-      [nil (error-domain/input-data-is-invalid (s/explain-str ::pics-domain/pic-post-input input-model))])))
+      [nil (error-domain/input-data-is-invalid
+            (s/explain-str ::pics-domain/pic-post-input input-model))])))
