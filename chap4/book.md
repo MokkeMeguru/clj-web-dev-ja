@@ -1,42 +1,42 @@
-- [Firebase Auth の準備](#org298c1ff)
-- [仮フロントエンドの作成](#orgf2641c5)
-- [サインアップ・サインイン・サインアウトフローの確認](#org8d7af9f)
-  - [サインアップ](#org2ec28ea)
-  - [サインイン](#org0aad4a4)
-  - [サインアウト](#orgee4c7b6)
-- [ドメイン・ハンドラの作成](#orgd4478e4)
-  - [domain](#org87035a2)
-  - [ルータ & ハンドラ](#org2c65609)
-- [infrastructure の実装](#org375840b)
-  - [Firebase Auth の token 読み込み](#org7b5785d)
-  - [DB の接続](#orgd8bd39b)
-  - [マイグレーション](#orgafe0f90)
-    - [実装方針](#org4305bab)
-    - [マイグレーションファイルを書く](#orgd07814d)
-    - [integrant のコードを書く](#org48cf32e)
-    - [CLI スクリプトを書く](#org86ebe3a)
-    - [サーバ用コードに埋め込む](#orgf473b37)
-- [interface の実装](#org65537ca)
-  - [Firebase Auth の token デコード機構](#orga0db6ec)
-  - [SQL の実行機構](#org95986f7)
-- [interface の組み込み](#orgad0522a)
-  - [サインアップ](#org7bfc030)
-  - [サインイン](#orgfaff47e)
-  - [実装](#orgc9fbbc4)
-    - [サインアップ](#org0f84422)
-    - [サインイン](#orge9cd8dc)
-    - [ハンドラの修正](#org4670042)
-- [動作確認](#orgd4f75bb)
-- [付録・捕捉](#org07a9471)
-  - [実装してみます](#orga6c9efe)
-  - [ランダムな数列と衝突確率](#org63ece35)
-  - [テスト用データベースのセットアップ](#org2e3067b)
+- [Firebase Auth の準備](#orgbb76b18)
+- [仮フロントエンドの作成](#org519361d)
+- [サインアップ・サインイン・サインアウトフローの確認](#org756ecf0)
+  - [サインアップ](#org4c43c43)
+  - [サインイン](#org2413150)
+  - [サインアウト](#orgaba2230)
+- [ドメイン・ハンドラの作成](#org8fefff5)
+  - [domain](#org4b24899)
+  - [ルータ & ハンドラ](#org4cb52a8)
+- [infrastructure の実装](#orgf6dd18e)
+  - [Firebase Auth の token 読み込み](#org92d5985)
+  - [DB の接続](#org269efe0)
+  - [マイグレーション](#orgb356f95)
+    - [実装方針](#org31d5429)
+    - [マイグレーションファイルを書く](#orgfea33b0)
+    - [integrant のコードを書く](#org0145f15)
+    - [CLI スクリプトを書く](#org5395caa)
+    - [サーバ用コードに埋め込む](#org1d4f4af)
+- [interface の実装](#org303b33d)
+  - [Firebase Auth の token デコード機構](#org8f4ee89)
+  - [SQL の実行機構](#orge8d49ba)
+- [interface の組み込み](#org845e442)
+  - [サインアップ](#org2fbf295)
+  - [サインイン](#org14eeabf)
+  - [実装](#org7424858)
+    - [サインアップ](#org9699495)
+    - [サインイン](#org983f0d9)
+    - [ハンドラの修正](#orga8c423e)
+- [動作確認](#orgd65b047)
+- [付録・捕捉](#org4849120)
+  - [実装してみます](#org9e09a97)
+  - [ランダムな数列と衝突確率](#org575f115)
+  - [テスト用データベースのセットアップ](#orgc4ba16a)
 
 本稿では、Web API を作っていく上で頻出する認証・認可周りの話を、Firebase Auth を用いて片付けます。 一般的に パスワード認証などが基礎のガイドでは紹介されますが、 refresh token を代表とする罠が多すぎるので、外部サービスを利用します。
 
 ただし、この手法は、(同等の機能を自前の認証サーバを用いることで実装できるとはいえ) Firebase への依存度が極めて高いため、 **技術的負債になる** 点に注意して下さい。
 
-<a id="org298c1ff"></a>
+<a id="orgbb76b18"></a>
 
 # Firebase Auth の準備
 
@@ -71,7 +71,7 @@
 - <https://firebase.google.com/docs/auth/web/google-signin?authuser=1#before_you_begin>
 - <https://firebase.google.com/docs/admin/setup?hl=ja#initialize-sdk>
 
-<a id="orgf2641c5"></a>
+<a id="org519361d"></a>
 
 # 仮フロントエンドの作成
 
@@ -195,13 +195,13 @@ npm install -D http-server
 
 なお、この **認証情報は有効期限がある** ため、 API をテストする際には最新のものを利用する必要があります。
 
-<a id="org8d7af9f"></a>
+<a id="org756ecf0"></a>
 
 # サインアップ・サインイン・サインアウトフローの確認
 
 実装をする前に、今回作る機能の利用フローを考えます。
 
-<a id="org2ec28ea"></a>
+<a id="org4c43c43"></a>
 
 ## サインアップ
 
@@ -236,7 +236,7 @@ npm install -D http-server
     {:user-id "<userId>"}
   ```
 
-<a id="org0aad4a4"></a>
+<a id="org2413150"></a>
 
 ## サインイン
 
@@ -271,19 +271,19 @@ npm install -D http-server
     {:user-id "<userId>"}
   ```
 
-<a id="orgee4c7b6"></a>
+<a id="orgaba2230"></a>
 
 ## サインアウト
 
 サインイン状態の管理は Firebase Auth 側が受け持っているので、こちらが行うことはありません。 (他アプリ開発をしている上で必要となるケースもあるかもしれませんが、今回は扱いません。)
 
-<a id="orgd4478e4"></a>
+<a id="org8fefff5"></a>
 
 # ドメイン・ハンドラの作成
 
 今回も見通しを良くするために usecase の詳細を省いた実装を先に行います。
 
-<a id="org87035a2"></a>
+<a id="org4b24899"></a>
 
 ## domain
 
@@ -291,7 +291,7 @@ npm install -D http-server
 
 今回問題になるのは、 firebase auth の `id-token` です。firebase auth の 仮フロントエンドから渡される id-token (`encrypted-id-token`) は、サーバ内で外部ライブラリによって復号され一意のユーザトークン (`id-token`) になります。
 
-またユーザ ID は衝突確率などを考慮して [9.2](#org63ece35) 、 15 桁の数字列としました。
+またユーザ ID は衝突確率などを考慮して [9.2](#org575f115) 、 15 桁の数字列としました。
 
 - firebase auth の domain
 
@@ -302,6 +302,7 @@ npm install -D http-server
               [picture-gallery.domain.error :as error-domain]
               [picture-gallery.domain.base :as base-domain]))
 
+  ;; model
   (s/def ::encrypted-id-token string?)
 
   ;; ここは usecase の in-out にまつわるモデルの話
@@ -319,7 +320,7 @@ npm install -D http-server
 
   ;; ここは interface の encrypyed-id-token デコード周りの話
   (s/def ::decode-id-token-succeed
-    (s/tuple ::base-domain/success ::users-domain/id-token))
+    (s/tuple ::base-domain/success (s/keys :req-un [::users-domain/id-token])))
 
   (s/def ::decode-id-token-failed
     (s/tuple ::base-domain/failure ::error-domain/error))
@@ -368,7 +369,7 @@ npm install -D http-server
   (s/def ::signup-response (s/keys :req-un [::user-id]))
   ```
 
-<a id="org2c65609"></a>
+<a id="org4cb52a8"></a>
 
 ## ルータ & ハンドラ
 
@@ -438,17 +439,17 @@ controller、 usecase、 presenter など詳細な実装は、この後実装す
 
 繰り返しますが、今回はこの apiKey に firebase auth の id-token を入力していくことになります。
 
-<a id="org375840b"></a>
+<a id="orgf6dd18e"></a>
 
 # infrastructure の実装
 
 Firebase や DB とやり取りをするためにそれぞれとの接続を作る必要があります。この部分は Clean Architecture 的には infrastructure にあたります。
 
-<a id="org7b5785d"></a>
+<a id="org92d5985"></a>
 
 ## Firebase Auth の token 読み込み
 
-[1](#org298c1ff) で用意した、 `resources/secrets/firebase_secrets.json` を読み込んで encrypted-id-token をデコードするための準備を行います。 今回はライブラリのドキュメントを信用して説明を省略していますが、時間があれば **API ドキュメントを読んだほうが良いです** (~~サンプルが古すぎるなど~~) 。
+[1](#orgbb76b18) で用意した、 `resources/secrets/firebase_secrets.json` を読み込んで encrypted-id-token をデコードするための準備を行います。 今回はライブラリのドキュメントを信用して説明を省略していますが、時間があれば **API ドキュメントを読んだほうが良いです** (~~サンプルが古すぎるなど~~) 。
 
 ```clojure
 (ns picture-gallery.infrastructure.firebase.core
@@ -516,7 +517,7 @@ REPL を再起動し、 `(start)` してみましょう。ログに `picture-gal
     2021-03-16T15:52:05.347Z f04004b3a5e3 INFO [picture-gallery.infrastructure.firebase.core:16] - connectiong to firebase with  ServiceAccountCredentials{clientId=107926774701607421850, clientEmail=firebase-adminsdk-l42c5@sample-picture-gallery-c12rb.iam.gserviceaccount.com, privateKeyId=80f9a8cceb5036d0a96f73a108fa485aeed314a4, transportFactoryClassName=com.google.auth.oauth2.OAuth2Utils$DefaultHttpTransportFactory, tokenServerUri=https://oauth2.googleapis.com/token, scopes=[], serviceAccountUser=null, quotaProjectId=null}
     # ...
 
-<a id="orgd8bd39b"></a>
+<a id="org269efe0"></a>
 
 ## DB の接続
 
@@ -658,11 +659,11 @@ REPL を再起動し、 `(start)` してみましょう。ログに `picture-gal
 - <https://github.com/brettwooldridge/HikariCP> Java の HikariCP (hikari-cp の参照元)
 - <https://github.com/duct-framework/database.sql.hikaricp> hikari-cp への logging 実装
 
-<a id="orgafe0f90"></a>
+<a id="orgb356f95"></a>
 
 ## マイグレーション
 
-<a id="org4305bab"></a>
+<a id="org31d5429"></a>
 
 ### 実装方針
 
@@ -673,7 +674,7 @@ DB との接続ができたところで、次に DB マイグレーションの�
 1.  マイグレート マイグレーションのファイルに基づいて DB を掘ります。
 2.  ロールバック マイグレーションしたものを i (> 1) 個だけ元に戻します。
 
-<a id="orgd07814d"></a>
+<a id="orgfea33b0"></a>
 
 ### マイグレーションファイルを書く
 
@@ -699,7 +700,7 @@ DB との接続ができたところで、次に DB マイグレーションの�
   DROP TABLE users;
   ```
 
-<a id="org48cf32e"></a>
+<a id="org0145f15"></a>
 
 ### integrant のコードを書く
 
@@ -794,7 +795,7 @@ DB との接続ができたところで、次に DB マイグレーションの�
 
 </details>
 
-<a id="org86ebe3a"></a>
+<a id="org5395caa"></a>
 
 ### CLI スクリプトを書く
 
@@ -901,7 +902,7 @@ lein run -m picture-gallery.cmd.migration.core $*
     Rolling back 001_users # <--- !!!
     migration operation is succeed
 
-<a id="orgf473b37"></a>
+<a id="org1d4f4af"></a>
 
 ### サーバ用コードに埋め込む
 
@@ -985,13 +986,13 @@ lein run -m picture-gallery.cmd.migration.core $*
     インデックス:
         "users_pkey" PRIMARY KEY, btree (id)
 
-<a id="org65537ca"></a>
+<a id="org303b33d"></a>
 
 # interface の実装
 
 Firebase Auth の token のデコード、SQL の実行部分は interface にあたるので、当該位置に実装していきます。 この部分は、usecase との依存関係の方向上、インターフェースを介して (名前の通りですね) やり取りをする必要があるので、 Clojure におけるインターフェースの記述方法一つ、 `defprotocol` を利用して実装します。
 
-<a id="orga0db6ec"></a>
+<a id="org8f4ee89"></a>
 
 ## Firebase Auth の token デコード機構
 
@@ -1005,7 +1006,7 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
   - 期限切れのトークン &ldquo;Firebase xxx has expired &#x2026; &rdquo; というエラーが発生したとき
   - 不明なエラー (それ以外のエラー) それ以外
 
-仕様が見えてきたところで実装してみます ([9.1](#orga6c9efe))。
+仕様が見えてきたところで実装してみます ([9.1](#org9e09a97))。
 
 ```clojure
 ;; いわゆるインターフェース
@@ -1097,7 +1098,7 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 
 - <https://github.com/firebase/firebase-admin-java/blob/d8b1583002d60568106bf4a7ba2d5bcbbb6c0463/src/main/java/com/google/firebase/auth/FirebaseTokenVerifierImpl.java>
 
-<a id="org95986f7"></a>
+<a id="orge8d49ba"></a>
 
 ## SQL の実行機構
 
@@ -1227,13 +1228,13 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 (ig/halt! system) ;; (不要なコネクションプールは閉じて下さい)
 ```
 
-<a id="orgad0522a"></a>
+<a id="org845e442"></a>
 
 # interface の組み込み
 
 (体感)一万年と二千年かかった下準備がようやくおわったので、残りの八千年かけてハンドラを usecase や interface と組み合わせて組み立てていきます。
 
-<a id="org7bfc030"></a>
+<a id="org2fbf295"></a>
 
 ## サインアップ
 
@@ -1251,7 +1252,7 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
     4.  ユーザをデータベースに登録する (gateway)
 3.  登録したユーザデータを http の response に整形する (presenter)
 
-<a id="orgfaff47e"></a>
+<a id="org14eeabf"></a>
 
 ## サインイン
 
@@ -1264,11 +1265,11 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
     3.  ユーザ情報を取得する
 3.  ユーザ情報を http の response に整形する (presenter)
 
-<a id="orgc9fbbc4"></a>
+<a id="org7424858"></a>
 
 ## 実装
 
-<a id="org0f84422"></a>
+<a id="org9699495"></a>
 
 ### サインアップ
 
@@ -1420,7 +1421,7 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 
 </details>
 
-<a id="orge9cd8dc"></a>
+<a id="org983f0d9"></a>
 
 ### サインイン
 
@@ -1537,7 +1538,7 @@ Firebase Auth の token のデコード、SQL の実行部分は interface に�
 
 </details>
 
-<a id="org4670042"></a>
+<a id="orga8c423e"></a>
 
 ### ハンドラの修正
 
@@ -1660,7 +1661,7 @@ db や auth の infrastructure と連携する必要があるため、 config �
             :handler (partial signup-post-handler db auth)}}]])
 ```
 
-<a id="orgd4f75bb"></a>
+<a id="orgd65b047"></a>
 
 # 動作確認
 
@@ -1668,11 +1669,11 @@ db や auth の infrastructure と連携する必要があるため、 config �
 
 signin の例): ![img](./img/auth-sample.png)
 
-<a id="org07a9471"></a>
+<a id="org4849120"></a>
 
 # 付録・捕捉
 
-<a id="orga6c9efe"></a>
+<a id="org9e09a97"></a>
 
 ## 実装してみます
 
@@ -1680,7 +1681,7 @@ signin の例): ![img](./img/auth-sample.png)
 
 特に実装が不透明なライブラリを使うときには、先にきっとこんなはずなテストを書いてから実装するよりも、こちらのほうが失敗が少ないので (n=1 orz)、Clojure や Python など使う際には、ぜひ REPL やインタプリタを活用してみて下さい。
 
-<a id="org63ece35"></a>
+<a id="org575f115"></a>
 
 ## ランダムな数列と衝突確率
 
@@ -1706,7 +1707,7 @@ signin の例): ![img](./img/auth-sample.png)
 
 仮に 15 桁でユーザ登録総数 100 万人未満のサービス開発をすると仮定すると、衝突する確率は `1 - exp(- (10^12)/(2 x 10^15)) = 1 - exp (- 1 / 2000) = 0.0005` なので、 1% 未満に落とせます。 とはいえ猿もキーボードを叩けばハムレットを書くので、最低でもリトライ＋上限試行回数を設ける必要があります。 (たとえ UUID であれ、 **衝突は起こります** )
 
-<a id="org2e3067b"></a>
+<a id="orgc4ba16a"></a>
 
 ## テスト用データベースのセットアップ
 
@@ -1752,6 +1753,7 @@ services:
       - "lib_data:/root/.m2"
     depends_on:
       - dev_db
+      - test_db
 volumes:
   test_db_volume:
   lib_data:

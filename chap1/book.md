@@ -1,15 +1,15 @@
-- [Integrant](#org5545d41)
-- [Clean Architecture と Directory Structure](#org859ec5d)
-  - [Clean Architecture](#org41204d9)
-    - [依存関係を意識したサービス開発の例](#org9aceab1)
-  - [Clean Architecture のために Directory Structure を考える](#org1684417)
-- [余談: threading Macro と エラーハンドリング](#org2c680e9)
-  - [Threading Macro](#orgf7bcea5)
-  - [エラーハンドリング](#orgec03326)
+- [Integrant](#org1029249)
+- [Clean Architecture と Directory Structure](#org110c25e)
+  - [Clean Architecture](#org4a0d91b)
+    - [依存関係を意識したサービス開発の例](#orge9856fe)
+  - [Clean Architecture のために Directory Structure を考える](#orge1b3e1e)
+- [余談: threading Macro と エラーハンドリング](#org80c02cb)
+  - [Threading Macro](#orge18f9af)
+  - [エラーハンドリング](#orgd789f8c)
 
 本稿は、Clojure における アプリ開発フレームワーク integrant をベースとして Clean Architecture を採用した API サーバ開発の基礎を紹介します。
 
-<a id="org5545d41"></a>
+<a id="org1029249"></a>
 
 # Integrant
 
@@ -35,7 +35,7 @@ cd picture-gallery
 
 ※今回 Duct を用いていない理由は、Duct の詳細な実装を理解・説明するのが困難であること、 Integrant を活用する場面が多いことを挙げることができます。
 
-<a id="org859ec5d"></a>
+<a id="org110c25e"></a>
 
 # Clean Architecture と Directory Structure
 
@@ -60,7 +60,7 @@ cd picture-gallery
 
 今回はここに Clean Architecture という概念を導入して開発を進めていきます。
 
-<a id="org41204d9"></a>
+<a id="org4a0d91b"></a>
 
 ## Clean Architecture
 
@@ -84,7 +84,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
 
 参考: Clean Architecture で API Server を構築してみる(<https://qiita.com/hirotakan/items/698c1f5773a3cca6193e>)
 
-<a id="org9aceab1"></a>
+<a id="orge9856fe"></a>
 
 ### 依存関係を意識したサービス開発の例
 
@@ -115,7 +115,7 @@ Clean Architecture とは、アプリケーション内の モデル、ロジッ
 
   ルーティングや、DB への接続を行います。
 
-<a id="org1684417"></a>
+<a id="orge1b3e1e"></a>
 
 ## Clean Architecture のために Directory Structure を考える
 
@@ -143,10 +143,10 @@ Clean Architecture は要素ごとに分割、という点が重要なので、�
         |   `-- sql                 (DB との接続、マイグレーション)
         |-- interface
         |   |-- controller
-        |   |   |-- api             (入力 json へのデシリアライズ)
-        |   |   `-- image_processor (画像加工)
+        |   |   `-- api             (入力 json へのデシリアライズ)
         |   |-- gateway
         |   |   |-- database        (DB に対する クエリ実行)
+        |   |   |-- image_db        (画像 に対する クエリ実行)
         |   |   `-- auth            (認証処理 (firebase を用いる))
         |   `-- presenter
         |       `-- api             (出力 json へのシリアライズ)
@@ -179,11 +179,11 @@ dev フォルダを利用するために、 `project.clj` を次のように修�
 
 (このあたりのコードはかなり Duct の構造を意識しています)
 
-<a id="org2c680e9"></a>
+<a id="org80c02cb"></a>
 
 # 余談: threading Macro と エラーハンドリング
 
-<a id="orgf7bcea5"></a>
+<a id="orge18f9af"></a>
 
 ## Threading Macro
 
@@ -238,7 +238,7 @@ Clojure では threading macro がこの要望を答えるものとしてあり�
 
 という形に書くことができます。
 
-<a id="orgec03326"></a>
+<a id="orgd789f8c"></a>
 
 ## エラーハンドリング
 

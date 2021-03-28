@@ -8,9 +8,10 @@
             [picture-gallery.domain.users :as users-domain]))
 
 (s/fdef signup
-  :args (s/cat :input-model ::auth-domain/signup-input
-               :db ::users-repository/users-repository
-               :auth ::auth-service/auth-service)
+  :args (s/cat
+         :db ::users-repository/users-repository
+         :auth ::auth-service/auth-service
+         :input-model ::auth-domain/signup-input)
   :ret (s/or :success (s/tuple ::auth-domain/signin-output nil?)
              :failure (s/tuple nil? ::error-domain/error)))
 

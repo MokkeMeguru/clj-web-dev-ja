@@ -10,3 +10,7 @@ target/
 package-lock.json
 /chap4/picture-gallery/resources/secrets/firebase_secrets.json
 /chap4/picture-gallery/resources/secrets/secret.txt
+/chap5/picture-gallery/resources/secrets/firebase_secrets.json
+/chap5/picture-gallery/resources/secrets/secret.txt
+/chap5/.markdown-preview.html
+/chap5/picture-gallery/dev-image-db/pic/0c3a2f7d-600b-47bc-921a-0091bd6a0169
