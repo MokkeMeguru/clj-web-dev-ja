@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <!-- js libaries -->
+    <script defer src="https://use.fontawesome.com/releases/v5.6.0/js/all.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.js" integrity="sha256-DrT5NfxfbHvMHux31Lkhxg42LY6of8TaYyK50jnxRnM=" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/4.7.1/firebase-ui-auth__ja.js"></script>
+
+    <!-- css -->
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.7.1/firebase-ui-auth.css" />    
+    <link href="/css/mystyles.css" rel="stylesheet" type="text/css">
+    <link href="css/screen.css" rel="stylesheet" type="text/css">
+
+    <!-- for PWA -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+    <link rel="manifest" href="pic-gallery.webmanifest">
+    
+    <title>pic-gallery-web</title>
+  </head>
+  <body>
+    <noscript>
+      pic-gallery-web is a JavaScript app. Please enable JavaScript to continue.
+    </noscript>
+    <div id="app"></div>
+
+    <!-- firebase -->
+    <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-auth.js"></script>
+     
+    <script type="text/javascript">
+     // set your values from firebase project
+     // --------------------------------------------
+     var apiKey = "AIzaSyA-AfxCZtmMBfbA6xJsDqA5wSNmod8VrIk"
+     var projectId = "sample-picture-gallery-c12rb"
+     // --------------------------------------------
+         
+     var authDomain = projectId + ".firebaseapp.com"        
+         var firebaseConfig = {
+             apiKey: apiKey,
+             authDomain:  authDomain,
+             projectId: projectId,
+         }
+
+    // Initialize Firebase
+     firebase.initializeApp(firebaseConfig);
+    </script>
+
+    <script src="js/compiled/app.js"></script>
+    <script>
+     if ('serviceWorker' in navigator) {
+         navigator.serviceWorker
+                  .register("/sw.js")
+                  .then(function() {console.log("service worker registered")})
+     }
+    </script>
+  </body>
+</html>
