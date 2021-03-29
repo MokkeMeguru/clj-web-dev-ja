@@ -626,6 +626,7 @@ Clojure で CSS を書くためのライブラリとして、 Garden (https://gi
 - lein garden once 一度だけコンパイルする
 - lein garden auto Hot loading を有効にする
 
+
 #+begin_example
 $ lein garden auto
 OpenJDK 64-Bit Server VM warning: Options -Xverify:none and -noverify were deprecated in JDK 13 and will likely be removed in a future release.
@@ -834,7 +835,7 @@ controller の ~:start~ はルーティング先のページに入った際に�
 (= ::routes-domain/home (-> (rf/match-by-path router "/") :data :name))
 #+END_SRC
 
-例えばこんな感じに書きます。(test/cljs/pic_gallery_web/routers_test.cljs)
+例えばこんな感じに書きます。(test/cljs/pic\under{}gallery\under{}web/routers\under{}test.cljs)
 
 #+BEGIN_SRC clojure
 (ns pic-gallery-web.routers-test
@@ -849,7 +850,7 @@ controller の ~:start~ はルーティング先のページに入った際に�
 
 #+END_SRC
 
-core_test を以下のように修正します。(わざと fail するテストが書かれています。)
+core\under{}test を以下のように修正します。(わざと fail するテストが書かれています。)
 
 #+BEGIN_SRC clojure
 (ns pic-gallery-web.core-test
