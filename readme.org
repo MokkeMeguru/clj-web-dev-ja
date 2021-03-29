@@ -1,0 +1,19 @@
+#+TITLE: Clojure x ClojureScript で深める Web 開発
+
+このレポジトリは Clojure x ClojureScript で Web 開発する際のガイドを目指したサンプルプロジェクトです。
+
+質問や改善要望などは (Twitter @MeguruMokke) や Issue へどうぞ。
+
+* 対象読者
+
+** Clean Architecture の他言語実装について調べている
+- 必要事項
+ 
+    - Lisp 構文を読めること (S 式への理解)
+     
+** Clojure で Web 開発をしたい
+- 必要事項
+
+  - lein run をしたことがある
+  - 基礎的な Clojure コードが読める
+  - Clojure の開発環境がある
