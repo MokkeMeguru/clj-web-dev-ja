@@ -17,12 +17,12 @@
 (defn ->http "
   usecase output model -> http response
   "
-  [[output-data error]]
-  (let [{:keys [pic-id user-id title image-urls created-at description]} output-data
-        output-model (cond-> {:id (.toString pic-id) :user-id user-id :title title
-                              :image-urls image-urls :created-at created-at}
-                       description (assoc :description description))]
+  [[output-model error]]
+  (let [{:keys [pic-id user-id title image-urls created-at description]} output-model
+        output-data (cond-> {:id (.toString pic-id) :user-id user-id :title title
+                             :image-urls image-urls :created-at created-at}
+                      description (assoc :description description))]
     (if (nil? error)
       {:status 200
-       :body output-model}
+       :body output-data}
       error)))

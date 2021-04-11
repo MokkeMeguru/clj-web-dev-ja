@@ -19,7 +19,7 @@
 (defn ->http "
   usecase output model -> http request
 "
-  [[output-data error]]
+  [[output-model error]]
   (if (nil? error)
     {:status 200
      :body (mapv
@@ -30,7 +30,7 @@
                 :created_at created-at
                 :image-urls image-urls}
                 description (assoc :description description)))
-            output-data)}
+            output-model)}
     error))
 
 ;; (st/instrument)

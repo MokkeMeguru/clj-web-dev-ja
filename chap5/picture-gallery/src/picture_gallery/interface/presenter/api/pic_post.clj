@@ -16,8 +16,8 @@
 (defn ->http "
   usecase output model -> http response
   "
-  [[output-data error]]
+  [[output-model error]]
   (if (nil? error)
     {:status 200
-     :body  {:id (.toString (:pic-id output-data))}}
+     :body  {:id (.toString (:pic-id output-model))}}
     error))

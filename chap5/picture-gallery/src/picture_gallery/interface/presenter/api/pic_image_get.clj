@@ -18,11 +18,11 @@
 (defn ->http "
   usecase output model -> http response
   "
-  [[output-data error]]
-  (let [{:keys [image-file]} output-data
-        output-model image-file]
+  [[output-model error]]
+  (let [{:keys [image-file]} output-model
+        output-data image-file]
     (if (nil? error)
       {:status 200
        :headers {"Content-Type" "image/png"}
-       :body (io/input-stream output-model)}
+       :body (io/input-stream output-data)}
       error)))

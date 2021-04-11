@@ -17,8 +17,8 @@
 (defn ->http "
   usecase output model -> http response
   "
-  [[output-data error]]
+  [[output-model error]]
   (if (nil? error)
     {:status 201
-     :body output-data}
+     :body output-model}
     error))
