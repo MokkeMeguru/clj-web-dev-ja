@@ -40,9 +40,9 @@
                          :in "header"
                          :name "Authorization"}}
                        :basePath "/"}
-
              :handler (swagger/create-swagger-handler)}}]
-
+     ["/api-docs/*" {:no-doc true
+                     :get (swagger-ui/create-swagger-ui-handler)}]
      ["/api"
       (sample-router/sample-router)
       (auth-router/auth-router db auth)

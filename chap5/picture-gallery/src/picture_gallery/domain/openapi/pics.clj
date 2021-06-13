@@ -28,7 +28,7 @@
 (s/def ::created-at pos-int?)
 
 (s/def ::user-pic
-  (s/keys :req-un [::id ::title ::created_at ::image-urls] :opt-un [::description]))
+  (s/keys :req-un [::id ::title ::created-at ::image-urls] :opt-un [::description]))
 
 (s/def ::user-pics (s/coll-of ::user-pic))
 
